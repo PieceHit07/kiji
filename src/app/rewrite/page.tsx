@@ -62,6 +62,28 @@ function RewriteContent() {
     alert("HTMLをコピーしました");
   };
 
+  const saveArticle = () => {
+    if (!rewrittenContent) return;
+    const saved = localStorage.getItem("kiji-articles");
+    const articles = saved ? JSON.parse(saved) : [];
+
+    // Extract title from H1 tag
+    const titleMatch = rewrittenContent.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    const title = titleMatch ? titleMatch[1] : "リライト記事";
+
+    articles.unshift({
+      id: Date.now().toString(),
+      keyword: "リライト",
+      title: title,
+      wordCount: wordCount.rewritten,
+      seoScore: 80,
+      createdAt: new Date().toISOString(),
+      content: rewrittenContent,
+    });
+    localStorage.setItem("kiji-articles", JSON.stringify(articles));
+    alert("記事を保存しました");
+  };
+
   return (
     <>
       <h1 className="text-2xl font-bold mb-2">記事リライト</h1>
@@ -162,12 +184,20 @@ function RewriteContent() {
           {loading ? "リライト中..." : "✨ リライトする"}
         </button>
         {rewrittenContent && (
-          <button
-            onClick={() => copyHtml(rewrittenContent)}
-            className="px-6 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#d0d0dc] font-semibold hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
-          >
-            📋 HTMLコピー
-          </button>
+          <>
+            <button
+              onClick={saveArticle}
+              className="px-6 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#d0d0dc] font-semibold hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
+            >
+              💾 保存
+            </button>
+            <button
+              onClick={() => copyHtml(rewrittenContent)}
+              className="px-6 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#d0d0dc] font-semibold hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
+            >
+              📋 HTMLコピー
+            </button>
+          </>
         )}
       </div>
 
