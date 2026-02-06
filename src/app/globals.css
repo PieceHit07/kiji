@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
+
+:root {
+  --bg: #08080d;
+  --surface: #111119;
+  --accent: #00e5a0;
+}
+
+body {
+  background: var(--bg);
+  color: #d0d0dc;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
