@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
 
 function RewriteContent() {
   const searchParams = useSearchParams();
@@ -14,19 +14,20 @@ function RewriteContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [wordCount, setWordCount] = useState({ original: 0, rewritten: 0 });
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     if (articleId) {
-      const saved = localStorage.getItem("kiji-articles");
-      if (saved) {
-        const articles = JSON.parse(saved);
-        const article = articles.find((a: any) => a.id === articleId);
-        if (article) {
-          setOriginalContent(article.content);
-          const textOnly = article.content.replace(/<[^>]+>/g, "").replace(/\s+/g, "");
-          setWordCount((prev) => ({ ...prev, original: textOnly.length }));
-        }
-      }
+      fetch(`/api/articles/${articleId}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((article) => {
+          if (article) {
+            setOriginalContent(article.content);
+            const textOnly = article.content.replace(/<[^>]+>/g, "").replace(/\s+/g, "");
+            setWordCount((prev) => ({ ...prev, original: textOnly.length }));
+          }
+        })
+        .catch(() => {});
     }
   }, [articleId]);
 
@@ -62,26 +63,29 @@ function RewriteContent() {
     alert("HTMLをコピーしました");
   };
 
-  const saveArticle = () => {
+  const saveArticle = async () => {
     if (!rewrittenContent) return;
-    const saved = localStorage.getItem("kiji-articles");
-    const articles = saved ? JSON.parse(saved) : [];
 
-    // Extract title from H1 tag
     const titleMatch = rewrittenContent.match(/<h1[^>]*>([^<]+)<\/h1>/i);
     const title = titleMatch ? titleMatch[1] : "リライト記事";
 
-    articles.unshift({
-      id: Date.now().toString(),
-      keyword: "リライト",
-      title: title,
-      wordCount: wordCount.rewritten,
-      seoScore: 80,
-      createdAt: new Date().toISOString(),
-      content: rewrittenContent,
-    });
-    localStorage.setItem("kiji-articles", JSON.stringify(articles));
-    alert("記事を保存しました");
+    try {
+      const res = await fetch("/api/articles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyword: "リライト",
+          title,
+          content: rewrittenContent,
+          word_count: wordCount.rewritten,
+          seo_score: 80,
+        }),
+      });
+      if (!res.ok) throw new Error("保存に失敗しました");
+      alert("記事を保存しました");
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   return (
@@ -116,20 +120,43 @@ function RewriteContent() {
         <div>
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">元の記事</h2>
-            <span className="text-xs text-[#6e6e82]">
-              {wordCount.original.toLocaleString()}文字
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#6e6e82]">
+                {wordCount.original.toLocaleString()}文字
+              </span>
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className="text-xs px-2 py-1 rounded bg-[#181822] border border-white/[0.06] text-[#6e6e82] hover:text-[#00e5a0] hover:border-[rgba(0,229,160,0.2)] transition-all"
+              >
+                {editMode ? "プレビュー" : "HTML編集"}
+              </button>
+            </div>
           </div>
-          <textarea
-            value={originalContent}
-            onChange={(e) => {
-              setOriginalContent(e.target.value);
-              const textOnly = e.target.value.replace(/<[^>]+>/g, "").replace(/\s+/g, "");
-              setWordCount((prev) => ({ ...prev, original: textOnly.length }));
-            }}
-            placeholder="リライトする記事のHTMLを貼り付けてください..."
-            className="w-full h-[500px] px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#d0d0dc] text-sm font-mono outline-none focus:border-[#00e5a0] transition-colors resize-none"
-          />
+          {editMode ? (
+            <textarea
+              value={originalContent}
+              onChange={(e) => {
+                setOriginalContent(e.target.value);
+                const textOnly = e.target.value.replace(/<[^>]+>/g, "").replace(/\s+/g, "");
+                setWordCount((prev) => ({ ...prev, original: textOnly.length }));
+              }}
+              placeholder="リライトする記事のHTMLを貼り付けてください..."
+              className="w-full h-[500px] px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#d0d0dc] text-sm font-mono outline-none focus:border-[#00e5a0] transition-colors resize-none"
+            />
+          ) : (
+            <div className="w-full h-[500px] px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#d0d0dc] text-sm overflow-auto">
+              {originalContent ? (
+                <div
+                  className="prose-dark"
+                  dangerouslySetInnerHTML={{ __html: originalContent }}
+                />
+              ) : (
+                <p className="text-[#6e6e82]">
+                  「HTML編集」をクリックしてHTMLを貼り付けてください
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Rewritten */}
@@ -213,19 +240,14 @@ function RewriteContent() {
 
 export default function RewritePage() {
   return (
-    <div className="min-h-screen bg-[#08080d] text-[#f0f0f6]">
-      {/* Header */}
-      <header className="h-14 border-b border-white/[0.06] flex items-center px-7">
-        <Link href="/dashboard" className="font-mono text-xl font-bold tracking-wider">
-          Kiji<span className="text-[#00e5a0]">.</span>
-        </Link>
-        <span className="ml-4 text-sm text-[#6e6e82]">/ リライト</span>
-      </header>
-
-      <main className="max-w-7xl mx-auto p-8">
-        <Suspense fallback={<div className="text-[#6e6e82]">読み込み中...</div>}>
-          <RewriteContent />
-        </Suspense>
+    <div className="flex h-screen bg-[#08080d] text-[#f0f0f6]">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-6xl mx-auto">
+          <Suspense fallback={<div className="text-[#6e6e82]">読み込み中...</div>}>
+            <RewriteContent />
+          </Suspense>
+        </div>
       </main>
     </div>
   );

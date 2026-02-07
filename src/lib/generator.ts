@@ -134,18 +134,54 @@ ${cooccurrenceText}
   }
 }
 
+// --- Tone descriptions ---
+const toneDescriptions: Record<string, string> = {
+  default: "です・ます調。バランスの取れた読みやすい文体",
+  casual: "だ・である調を避け、「〜ですよね」「〜してみましょう」など親しみやすく砕けた口調。読者に語りかけるように",
+  professional: "である調。ビジネス・専門家向けの堅い文体。専門用語を適切に使用",
+  beginner: "です・ます調。専門用語を極力避け、初心者でもわかるように平易な言葉で丁寧に説明",
+  persuasive: "です・ます調。「〜しませんか？」「今すぐ〜」など行動を促す説得力のある文体。ベネフィットを強調",
+};
+
+// --- Custom generation options ---
+export interface GenerateOptions {
+  customPrompt?: string;
+  referenceUrl?: string;
+  tone?: string;
+}
+
 // --- 記事本文生成 ---
 export async function generateArticle(
   keyword: string,
   outline: OutlineItem[],
   cooccurrence: string[],
-  targetWordCount: number
+  targetWordCount: number,
+  options: GenerateOptions = {}
 ): Promise<GeneratedArticle> {
   const apiKey = process.env.OPENAI_API_KEY;
+  const { customPrompt, referenceUrl, tone = "default" } = options;
 
   const outlineText = outline
     .map((item) => `${item.tag.toUpperCase()}: ${item.text}`)
     .join("\n");
+
+  // トーン設定
+  const toneInstruction = toneDescriptions[tone] || toneDescriptions.default;
+
+  // 参考記事の文体分析（URLが提供された場合）
+  let referenceStyleInstruction = "";
+  if (referenceUrl) {
+    referenceStyleInstruction = `
+【参考記事の文体を真似する】
+以下のURLの記事の口調・文体・表現スタイルを可能な限り真似してください：
+${referenceUrl}
+（記事を読み取れない場合は、一般的な良質なWebライティングの文体で執筆してください）`;
+  }
+
+  // カスタムプロンプト
+  const customInstructions = customPrompt
+    ? `\n【追加の指示】\n${customPrompt}`
+    : "";
 
   const prompt = `あなたはSEOに精通したプロのWebライターです。
 
@@ -160,11 +196,13 @@ ${outlineText}
 
 【目標文字数】${targetWordCount}字
 
+【文体・トーン】${toneInstruction}
+${referenceStyleInstruction}${customInstructions}
+
 執筆ルール：
 - 各H2セクションは400〜800字
 - ターゲットKWはH1・最初のH2・まとめに含める（密度2〜3%）
 - 共起語は自然に文中に散りばめる（カバー率80%以上を目標）
-- 文体：です・ます調。専門用語は初出時に簡潔に説明
 - リード文（H1直後）は読者の悩みに共感 → 記事で得られることを提示
 - 各セクションの冒頭で結論を述べ、その後に解説を展開
 - HTML形式で出力（h1, h2, h3, p タグ。装飾タグは不要）

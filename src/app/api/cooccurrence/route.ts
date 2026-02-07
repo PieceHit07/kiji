@@ -52,8 +52,17 @@ importanceは high/medium/low の3段階`;
     });
 
     if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const errMsg = errData?.error?.message || "共起語の取得に失敗しました";
+      console.error("OpenAI API error:", errData);
+      if (res.status === 401) {
+        return NextResponse.json(
+          { error: "OpenAI APIキーが無効です。正しいキーを設定してください。" },
+          { status: 500 }
+        );
+      }
       return NextResponse.json(
-        { error: "共起語の取得に失敗しました" },
+        { error: errMsg },
         { status: 500 }
       );
     }

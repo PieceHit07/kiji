@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
 
 interface CooccurrenceWord {
   word: string;
@@ -45,16 +45,10 @@ export default function CooccurrencePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08080d] text-[#f0f0f6]">
-      {/* Header */}
-      <header className="h-14 border-b border-white/[0.06] flex items-center px-7">
-        <Link href="/dashboard" className="font-mono text-xl font-bold tracking-wider">
-          Kiji<span className="text-[#00e5a0]">.</span>
-        </Link>
-        <span className="ml-4 text-sm text-[#6e6e82]">/ 共起語チェッカー</span>
-      </header>
-
-      <main className="max-w-4xl mx-auto p-8">
+    <div className="flex h-screen bg-[#08080d] text-[#f0f0f6]">
+      <Sidebar />
+      <main className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold mb-2">共起語チェッカー</h1>
         <p className="text-[#6e6e82] mb-8">
           キーワードを入力すると、SEO記事に含めるべき共起語・関連語をAIが提案します
@@ -125,6 +119,7 @@ export default function CooccurrencePage() {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );

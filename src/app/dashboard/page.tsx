@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { useSession, signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
+import { convertToNoteFormat } from "@/lib/export";
 
 // --- Types ---
 interface Competitor {
@@ -55,7 +59,24 @@ interface ArticleData {
 // --- Steps ---
 type Step = "input" | "analyzing" | "outline" | "generating" | "article";
 
+// --- Tone Presets ---
+const tonePresets = [
+  { id: "default", label: "標準", description: "バランスの取れた読みやすい文体" },
+  { id: "casual", label: "カジュアル", description: "親しみやすく砕けた口調" },
+  { id: "professional", label: "専門的", description: "ビジネス・専門家向けの堅い文体" },
+  { id: "beginner", label: "初心者向け", description: "専門用語を避けたわかりやすい説明" },
+  { id: "persuasive", label: "セールス", description: "行動を促す説得力のある文体" },
+];
+
 export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const [keyword, setKeyword] = useState("");
   const [step, setStep] = useState<Step>("input");
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
@@ -64,9 +85,53 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [isComposing, setIsComposing] = useState(false);
 
-  // --- 分析開始 ---
-  const handleAnalyze = useCallback(async () => {
-    if (!keyword.trim()) return;
+  // Custom settings
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [referenceUrl, setReferenceUrl] = useState("");
+  const [selectedTone, setSelectedTone] = useState("default");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const { data: session } = useSession();
+  const autoAnalyzeRef = useRef(false);
+  const searchParams = useSearchParams();
+
+  // Stripe決済完了後にプランを反映
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id");
+    if (sessionId && session?.user) {
+      fetch("/api/stripe/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.updated) {
+            window.location.href = "/dashboard";
+          }
+        })
+        .catch(() => {});
+    }
+  }, [searchParams, session]);
+
+  // 認証後にキーワードを復元して自動分析
+  useEffect(() => {
+    if (session && !autoAnalyzeRef.current) {
+      const pendingKeyword = localStorage.getItem("kiji-pending-keyword");
+      if (pendingKeyword) {
+        localStorage.removeItem("kiji-pending-keyword");
+        autoAnalyzeRef.current = true;
+        setKeyword(pendingKeyword);
+        // キーワードセット後に分析を実行
+        setTimeout(() => {
+          runAnalyze(pendingKeyword);
+        }, 100);
+      }
+    }
+  }, [session]);
+
+  // --- 分析実行（キーワードを引数で受ける） ---
+  const runAnalyze = useCallback(async (kw: string) => {
     setError("");
     setStep("analyzing");
 
@@ -74,7 +139,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim() }),
+        body: JSON.stringify({ keyword: kw.trim() }),
       });
 
       const data = await res.json();
@@ -87,7 +152,21 @@ export default function DashboardPage() {
       setError(e.message);
       setStep("input");
     }
-  }, [keyword]);
+  }, []);
+
+  // --- 分析開始 ---
+  const handleAnalyze = useCallback(async () => {
+    if (!keyword.trim()) return;
+
+    // 未ログインならキーワードを保存してGoogle認証へ
+    if (!session) {
+      localStorage.setItem("kiji-pending-keyword", keyword.trim());
+      signIn("google", { callbackUrl: "/dashboard" });
+      return;
+    }
+
+    runAnalyze(keyword);
+  }, [keyword, session, runAnalyze]);
 
   // --- 記事生成 ---
   const handleGenerate = useCallback(async () => {
@@ -104,6 +183,9 @@ export default function DashboardPage() {
           outline,
           cooccurrence: analysis.cooccurrence.map((w) => w.word),
           targetWordCount: analysis.seoTargets.recommendedWordCount,
+          customPrompt: customPrompt || undefined,
+          referenceUrl: referenceUrl || undefined,
+          tone: selectedTone,
         }),
       });
 
@@ -116,7 +198,7 @@ export default function DashboardPage() {
       setError(e.message);
       setStep("outline");
     }
-  }, [analysis, outline]);
+  }, [analysis, outline, customPrompt, referenceUrl, selectedTone]);
 
   // --- 見出し編集 ---
   const updateOutlineItem = (index: number, text: string) => {
@@ -152,54 +234,15 @@ export default function DashboardPage() {
     setOutline([]);
     setArticle(null);
     setError("");
+    setCustomPrompt("");
+    setReferenceUrl("");
+    setSelectedTone("default");
+    setShowAdvanced(false);
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <aside className="w-56 min-w-[224px] bg-[#0c0c14] border-r border-white/[0.06] flex flex-col p-5 max-md:hidden">
-        <div className="font-mono text-xl font-bold text-[#f0f0f6] tracking-wider mb-6">
-          Kiji<span className="text-[#00e5a0]">.</span>
-        </div>
-
-        <div className="text-[0.7rem] text-[#6e6e82] uppercase tracking-[2px] mb-3 px-2">
-          メイン
-        </div>
-        <button
-          onClick={handleReset}
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm bg-[rgba(0,229,160,0.1)] text-[#00e5a0] mb-1"
-        >
-          <PlusIcon /> 新規記事作成
-        </button>
-        <a href="/articles" className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc] mb-1">
-          <ListIcon /> 記事一覧
-        </a>
-        <a href="/rewrite" className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc] mb-6">
-          <RefreshIcon /> リライト
-        </a>
-
-        <div className="text-[0.7rem] text-[#6e6e82] uppercase tracking-[2px] mb-3 px-2">
-          ツール
-        </div>
-        <a href="/cooccurrence" className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc] mb-1">
-          <SearchIcon /> 共起語チェッカー
-        </a>
-        <button className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc] opacity-50 cursor-not-allowed" disabled>
-          <ChartIcon /> 順位トラッキング
-        </button>
-
-        <div className="flex-1" />
-
-        <div className="pt-4 border-t border-white/[0.06] flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00e5a0] to-[#00c4ff] flex items-center justify-center text-xs font-bold text-[#08080d]">
-            T
-          </div>
-          <div>
-            <div className="text-sm text-[#d0d0dc]">田中太郎</div>
-            <div className="text-[0.7rem] text-[#00e5a0]">Pro プラン</div>
-          </div>
-        </div>
-      </aside>
+    <div className="flex h-screen bg-[#08080d] text-[#f0f0f6]">
+      <Sidebar />
 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -279,6 +322,75 @@ export default function DashboardPage() {
                   )
                 )}
               </div>
+
+              {/* 詳細設定トグル */}
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="mt-6 text-sm text-[#6e6e82] hover:text-[#00e5a0] transition-colors flex items-center gap-2"
+              >
+                <span className={`transform transition-transform ${showAdvanced ? "rotate-90" : ""}`}>▶</span>
+                詳細設定（トーン・カスタムプロンプト）
+              </button>
+
+              {/* 詳細設定パネル */}
+              {showAdvanced && (
+                <div className="mt-4 space-y-5 pt-5 border-t border-white/[0.06]">
+                  {/* トーン選択 */}
+                  <div>
+                    <label className="text-sm text-[#6e6e82] block mb-3">文体・トーン</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {tonePresets.map((preset) => (
+                        <button
+                          key={preset.id}
+                          onClick={() => setSelectedTone(preset.id)}
+                          className={`px-4 py-2 rounded-lg text-sm border transition-all ${
+                            selectedTone === preset.id
+                              ? "bg-[rgba(0,229,160,0.1)] border-[rgba(0,229,160,0.3)] text-[#00e5a0]"
+                              : "bg-[#181822] border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,229,160,0.2)]"
+                          }`}
+                          title={preset.description}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-[#6e6e82] mt-2">
+                      {tonePresets.find(p => p.id === selectedTone)?.description}
+                    </p>
+                  </div>
+
+                  {/* 参考記事URL */}
+                  <div>
+                    <label className="text-sm text-[#6e6e82] block mb-2">
+                      参考記事URL（この記事の文体を真似します）
+                    </label>
+                    <input
+                      type="url"
+                      value={referenceUrl}
+                      onChange={(e) => setReferenceUrl(e.target.value)}
+                      placeholder="https://example.com/article"
+                      className="w-full px-4 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-sm outline-none focus:border-[#00c4ff] transition-colors placeholder:text-[#6e6e82]"
+                    />
+                    <p className="text-xs text-[#6e6e82] mt-1">
+                      URLを入力すると、その記事の口調・文体を分析して似たスタイルで執筆します
+                    </p>
+                  </div>
+
+                  {/* カスタムプロンプト */}
+                  <div>
+                    <label className="text-sm text-[#6e6e82] block mb-2">
+                      カスタムプロンプト（追加の指示）
+                    </label>
+                    <textarea
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="例：&#10;・具体的な数字やデータを多く使って&#10;・「〜です」「〜ます」調で統一&#10;・読者に語りかけるような文体で"
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-sm outline-none focus:border-[#00c4ff] transition-colors placeholder:text-[#6e6e82] resize-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -532,20 +644,26 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-3 items-center">
                   <button
-                    onClick={() => {
-                      const saved = localStorage.getItem("kiji-articles");
-                      const articles = saved ? JSON.parse(saved) : [];
-                      articles.unshift({
-                        id: Date.now().toString(),
-                        keyword: analysis?.keyword || "",
-                        title: article.title,
-                        wordCount: article.wordCount,
-                        seoScore: article.seoScore.overall,
-                        createdAt: new Date().toISOString(),
-                        content: article.content,
-                      });
-                      localStorage.setItem("kiji-articles", JSON.stringify(articles));
-                      alert("記事を保存しました");
+                    onClick={async () => {
+                      try {
+                        const res = await fetch("/api/articles", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            keyword: analysis?.keyword || "",
+                            title: article.title,
+                            meta_description: article.metaDescription,
+                            content: article.content,
+                            word_count: article.wordCount,
+                            seo_score: article.seoScore.overall,
+                            seo_score_details: article.seoScore,
+                          }),
+                        });
+                        if (!res.ok) throw new Error("保存に失敗しました");
+                        alert("記事を保存しました");
+                      } catch (e: any) {
+                        alert(e.message);
+                      }
                     }}
                     className="px-4 py-2.5 rounded-lg text-sm bg-gradient-to-br from-[#00e5a0] to-[#00c88a] text-[#08080d] font-semibold hover:shadow-[0_4px_20px_rgba(0,229,160,0.35)] transition-all"
                   >
@@ -556,6 +674,16 @@ export default function DashboardPage() {
                     className="px-4 py-2.5 rounded-lg text-sm bg-[#181822] border border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
                   >
                     📋 HTMLコピー
+                  </button>
+                  <button
+                    onClick={() => {
+                      const noteText = convertToNoteFormat(article.content);
+                      navigator.clipboard.writeText(noteText);
+                      alert("note用テキストをコピーしました");
+                    }}
+                    className="px-4 py-2.5 rounded-lg text-sm bg-[#181822] border border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,196,255,0.2)] hover:text-[#00c4ff] transition-all"
+                  >
+                    📝 note用
                   </button>
                 </div>
               </div>
@@ -629,40 +757,6 @@ function LoadingDots() {
 }
 
 // --- Icons ---
-function PlusIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-
-function ListIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 6h16M4 12h16M4 18h10" />
-    </svg>
-  );
-}
-
-function RefreshIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M23 4v6h-6M1 20v-6h6" />
-      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx={11} cy={11} r={8} />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
 function ChartIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

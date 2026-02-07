@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateArticle } from "@/lib/generator";
-import type { OutlineItem } from "@/lib/generator";
+import type { OutlineItem, GenerateOptions } from "@/lib/generator";
 
 export const maxDuration = 60; // 記事生成は時間がかかる
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { keyword, outline, cooccurrence, targetWordCount } = body;
+    const { keyword, outline, cooccurrence, targetWordCount, customPrompt, referenceUrl, tone } = body;
 
     if (!keyword || !outline || !Array.isArray(outline)) {
       return NextResponse.json(
@@ -37,12 +37,20 @@ export async function POST(request: NextRequest) {
 
     const target = targetWordCount || 6000;
 
+    // カスタムオプション
+    const options: GenerateOptions = {
+      customPrompt,
+      referenceUrl,
+      tone: tone || "default",
+    };
+
     // 記事生成
     const article = await generateArticle(
       keyword,
       validOutline,
       cooccurrenceWords,
-      target
+      target,
+      options
     );
 
     return NextResponse.json({

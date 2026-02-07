@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /articles
+Disallow: /rewrite
+Disallow: /cooccurrence
+Disallow: /ranking
+
+Sitemap: https://kiji.app/sitemap.xml
