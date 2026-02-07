@@ -10,22 +10,22 @@ function LoginContent() {
   const error = searchParams.get("error");
 
   return (
-    <div className="min-h-screen bg-[#08080d] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="font-mono font-bold text-4xl text-[#f0f0f6] tracking-wider mb-2">
-            Kiji<span className="text-[#00e5a0]">.</span>
+          <h1 className="font-mono font-bold text-4xl text-text-bright tracking-wider mb-2">
+            Kiji<span className="text-accent">.</span>
           </h1>
-          <p className="text-[#6e6e82]">AIでSEO記事を自動生成</p>
+          <p className="text-text-dim">AIでSEO記事を自動生成</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-[#111119] border border-white/[0.06] rounded-2xl p-8">
-          <h2 className="text-xl font-semibold text-[#f0f0f6] mb-2 text-center">
+        <div className="bg-surface border border-border rounded-2xl p-8">
+          <h2 className="text-xl font-semibold text-text-bright mb-2 text-center">
             ログイン
           </h2>
-          <p className="text-[#6e6e82] text-sm text-center mb-6">
+          <p className="text-text-dim text-sm text-center mb-6">
             Googleアカウントでログインしてください
           </p>
 
@@ -47,7 +47,7 @@ function LoginContent() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-[#6e6e82] text-xs mt-6">
+        <p className="text-center text-text-dim text-xs mt-6">
           ログインすることで、利用規約に同意したものとみなされます
         </p>
       </div>
@@ -59,8 +59,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#08080d] flex items-center justify-center">
-          <div className="text-[#6e6e82]">読み込み中...</div>
+        <div className="min-h-screen bg-bg flex items-center justify-center">
+          <div className="text-text-dim">読み込み中...</div>
         </div>
       }
     >

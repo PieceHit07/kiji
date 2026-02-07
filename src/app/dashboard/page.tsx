@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import ImageGenerateModal from "@/components/ImageGenerateModal";
 import { convertToNoteFormat } from "@/lib/export";
 
 // --- Types ---
@@ -91,9 +92,30 @@ function DashboardContent() {
   const [selectedTone, setSelectedTone] = useState("default");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  const [tokensRemaining, setTokensRemaining] = useState<number | null>(null);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+
   const { data: session } = useSession();
   const autoAnalyzeRef = useRef(false);
   const searchParams = useSearchParams();
+
+  // トークン残高を取得
+  const refreshTokens = useCallback(() => {
+    fetch("/api/user")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.tokens) {
+          setTokensRemaining(d.tokens.remaining);
+          window.dispatchEvent(new CustomEvent("tokens-updated", { detail: d.tokens }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (session?.user) refreshTokens();
+  }, [session, refreshTokens]);
 
   // Stripe決済完了後にプランを反映
   useEffect(() => {
@@ -143,8 +165,16 @@ function DashboardContent() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "分析に失敗しました");
+      if (!res.ok) {
+        if (data.needTokens) {
+          setShowTokenModal(true);
+          setStep("input");
+          return;
+        }
+        throw new Error(data.error || "分析に失敗しました");
+      }
 
+      refreshTokens();
       setAnalysis(data);
       setOutline(data.outline || []);
       setStep("outline");
@@ -152,7 +182,7 @@ function DashboardContent() {
       setError(e.message);
       setStep("input");
     }
-  }, []);
+  }, [refreshTokens]);
 
   // --- 分析開始 ---
   const handleAnalyze = useCallback(async () => {
@@ -190,15 +220,23 @@ function DashboardContent() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "生成に失敗しました");
+      if (!res.ok) {
+        if (data.needTokens) {
+          setShowTokenModal(true);
+          setStep("outline");
+          return;
+        }
+        throw new Error(data.error || "生成に失敗しました");
+      }
 
+      refreshTokens();
       setArticle(data);
       setStep("article");
     } catch (e: any) {
       setError(e.message);
       setStep("outline");
     }
-  }, [analysis, outline, customPrompt, referenceUrl, selectedTone]);
+  }, [analysis, outline, customPrompt, referenceUrl, selectedTone, refreshTokens]);
 
   // --- 見出し編集 ---
   const updateOutlineItem = (index: number, text: string) => {
@@ -241,23 +279,27 @@ function DashboardContent() {
   };
 
   return (
-    <div className="flex h-screen bg-[#08080d] text-[#f0f0f6]">
+    <div className="flex h-screen bg-bg text-text-bright">
       <Sidebar />
 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <div className="h-14 min-h-[56px] border-b border-white/[0.06] flex items-center justify-between px-7">
-          <div className="text-base font-semibold text-[#f0f0f6]">
+        <div className="h-14 min-h-[56px] border-b border-border flex items-center justify-between px-7">
+          <div className="text-base font-semibold text-text-bright">
             {step === "input" && "新規記事作成"}
             {step === "analyzing" && "競合分析中..."}
             {step === "outline" && "構成案の確認・編集"}
             {step === "generating" && "記事を生成中..."}
             {step === "article" && "記事プレビュー"}
           </div>
-          <div className="text-xs text-[#6e6e82] bg-[#181822] px-3 py-1.5 rounded-md">
-            今月の利用: <span className="text-[#00e5a0] font-bold">12</span> / 30 記事
-          </div>
+          {tokensRemaining !== null && (
+            <div className={`text-xs bg-surface2 px-3 py-1.5 rounded-md ${
+              tokensRemaining <= 5 ? "text-red-400" : tokensRemaining <= 20 ? "text-warning" : "text-text-dim"
+            }`}>
+              <>残りトークン: <span className="font-bold font-mono">{tokensRemaining}</span></>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -271,10 +313,10 @@ function DashboardContent() {
 
           {/* === STEP: INPUT === */}
           {(step === "input" || step === "analyzing") && (
-            <div className="bg-[#111119] border border-white/[0.06] rounded-2xl p-8 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#00e5a0] via-[#00c4ff] to-[#00e5a0] bg-[length:200%_100%] animate-[gradientSlide_3s_linear_infinite]" />
+            <div className="bg-surface border border-border rounded-2xl p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent via-accent2 to-accent bg-[length:200%_100%] animate-[gradientSlide_3s_linear_infinite]" />
 
-              <label className="text-sm text-[#6e6e82] block mb-3">
+              <label className="text-sm text-text-dim block mb-3">
                 ターゲットキーワード
               </label>
               <div className="flex gap-3 mb-5">
@@ -286,22 +328,33 @@ function DashboardContent() {
                   onCompositionStart={() => setIsComposing(true)}
                   onCompositionEnd={() => setIsComposing(false)}
                   placeholder="例: SEO対策 初心者"
-                  className="flex-1 px-4 py-3.5 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-base outline-none focus:border-[#00e5a0] transition-colors placeholder:text-[#6e6e82]"
+                  className="flex-1 px-4 py-3.5 rounded-xl bg-surface2 border border-border text-text-bright text-base outline-none focus:border-accent transition-colors placeholder:text-text-dim"
                   disabled={step === "analyzing"}
                 />
                 <button
                   onClick={handleAnalyze}
                   disabled={step === "analyzing" || !keyword.trim()}
-                  className="px-7 py-3.5 rounded-xl bg-gradient-to-br from-[#00e5a0] to-[#00c88a] text-[#08080d] font-semibold whitespace-nowrap hover:shadow-[0_4px_24px_rgba(0,229,160,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-7 py-3.5 rounded-xl bg-gradient-to-br from-accent to-accent-dark text-on-accent font-semibold whitespace-nowrap hover:shadow-[0_4px_24px_var(--color-accent-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {step === "analyzing" ? (
                     <span className="flex items-center gap-2">
                       <LoadingDots /> 分析中...
                     </span>
                   ) : (
-                    "🔍 競合を分析"
+                    "🔍 競合を分析（3トークン）"
                   )}
                 </button>
+              </div>
+
+              {/* トークンコスト */}
+              <div className="flex items-center gap-4 mb-5 px-1 text-[0.7rem] text-text-dim">
+                <span>消費トークン:</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />分析 3</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent2 inline-block" />生成 10</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-warning inline-block" />リライト 5</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-text-dim inline-block" />共起語 2</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-text-dim inline-block" />順位 1</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent2 inline-block" />画像 8</span>
               </div>
 
               {/* サジェストキーワード */}
@@ -313,8 +366,8 @@ function DashboardContent() {
                       onClick={() => setKeyword(kw)}
                       className={`px-3.5 py-1.5 rounded-full text-xs border transition-all ${
                         keyword === kw
-                          ? "bg-[rgba(0,229,160,0.1)] border-[rgba(0,229,160,0.2)] text-[#00e5a0]"
-                          : "bg-[#181822] border-white/[0.06] text-[#6e6e82] hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0]"
+                          ? "bg-[var(--color-accent-tint)] border-[var(--color-accent-tint-border)] text-accent"
+                          : "bg-surface2 border-border text-text-dim hover:border-[var(--color-accent-tint-border)] hover:text-accent"
                       }`}
                     >
                       {kw}
@@ -326,7 +379,7 @@ function DashboardContent() {
               {/* 詳細設定トグル */}
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="mt-6 text-sm text-[#6e6e82] hover:text-[#00e5a0] transition-colors flex items-center gap-2"
+                className="mt-6 text-sm text-text-dim hover:text-accent transition-colors flex items-center gap-2"
               >
                 <span className={`transform transition-transform ${showAdvanced ? "rotate-90" : ""}`}>▶</span>
                 詳細設定（トーン・カスタムプロンプト）
@@ -334,10 +387,10 @@ function DashboardContent() {
 
               {/* 詳細設定パネル */}
               {showAdvanced && (
-                <div className="mt-4 space-y-5 pt-5 border-t border-white/[0.06]">
+                <div className="mt-4 space-y-5 pt-5 border-t border-border">
                   {/* トーン選択 */}
                   <div>
-                    <label className="text-sm text-[#6e6e82] block mb-3">文体・トーン</label>
+                    <label className="text-sm text-text-dim block mb-3">文体・トーン</label>
                     <div className="flex gap-2 flex-wrap">
                       {tonePresets.map((preset) => (
                         <button
@@ -345,8 +398,8 @@ function DashboardContent() {
                           onClick={() => setSelectedTone(preset.id)}
                           className={`px-4 py-2 rounded-lg text-sm border transition-all ${
                             selectedTone === preset.id
-                              ? "bg-[rgba(0,229,160,0.1)] border-[rgba(0,229,160,0.3)] text-[#00e5a0]"
-                              : "bg-[#181822] border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,229,160,0.2)]"
+                              ? "bg-[var(--color-accent-tint)] border-[var(--color-accent-tint-border)] text-accent"
+                              : "bg-surface2 border-border text-text-primary hover:border-[var(--color-accent-tint-border)]"
                           }`}
                           title={preset.description}
                         >
@@ -354,14 +407,14 @@ function DashboardContent() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-[#6e6e82] mt-2">
+                    <p className="text-xs text-text-dim mt-2">
                       {tonePresets.find(p => p.id === selectedTone)?.description}
                     </p>
                   </div>
 
                   {/* 参考記事URL */}
                   <div>
-                    <label className="text-sm text-[#6e6e82] block mb-2">
+                    <label className="text-sm text-text-dim block mb-2">
                       参考記事URL（この記事の文体を真似します）
                     </label>
                     <input
@@ -369,16 +422,16 @@ function DashboardContent() {
                       value={referenceUrl}
                       onChange={(e) => setReferenceUrl(e.target.value)}
                       placeholder="https://example.com/article"
-                      className="w-full px-4 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-sm outline-none focus:border-[#00c4ff] transition-colors placeholder:text-[#6e6e82]"
+                      className="w-full px-4 py-3 rounded-xl bg-surface2 border border-border text-text-bright text-sm outline-none focus:border-accent2 transition-colors placeholder:text-text-dim"
                     />
-                    <p className="text-xs text-[#6e6e82] mt-1">
+                    <p className="text-xs text-text-dim mt-1">
                       URLを入力すると、その記事の口調・文体を分析して似たスタイルで執筆します
                     </p>
                   </div>
 
                   {/* カスタムプロンプト */}
                   <div>
-                    <label className="text-sm text-[#6e6e82] block mb-2">
+                    <label className="text-sm text-text-dim block mb-2">
                       カスタムプロンプト（追加の指示）
                     </label>
                     <textarea
@@ -386,7 +439,7 @@ function DashboardContent() {
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       placeholder="例：&#10;・具体的な数字やデータを多く使って&#10;・「〜です」「〜ます」調で統一&#10;・読者に語りかけるような文体で"
                       rows={3}
-                      className="w-full px-4 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-sm outline-none focus:border-[#00c4ff] transition-colors placeholder:text-[#6e6e82] resize-none"
+                      className="w-full px-4 py-3 rounded-xl bg-surface2 border border-border text-text-bright text-sm outline-none focus:border-accent2 transition-colors placeholder:text-text-dim resize-none"
                     />
                   </div>
                 </div>
@@ -400,23 +453,23 @@ function DashboardContent() {
               {/* Competitor + Cooccurrence Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 {/* Competitors */}
-                <div className="bg-[#111119] border border-white/[0.06] rounded-xl p-6">
-                  <h3 className="text-sm text-[#6e6e82] font-medium mb-4 flex items-center gap-2">
-                    <ChartIcon className="w-4 h-4 text-[#00e5a0]" />
+                <div className="bg-surface border border-border rounded-xl p-6">
+                  <h3 className="text-sm text-text-dim font-medium mb-4 flex items-center gap-2">
+                    <ChartIcon className="w-4 h-4 text-accent" />
                     競合上位記事
                   </h3>
                   <ul>
                     {analysis.competitors.slice(0, 5).map((c) => (
-                      <li key={c.rank} className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
+                      <li key={c.rank} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
                         <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold font-mono flex-shrink-0 ${
-                          c.rank <= 3 ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]" : "bg-[#181822] text-[#6e6e82]"
+                          c.rank <= 3 ? "bg-[var(--color-accent-tint)] text-accent" : "bg-surface2 text-text-dim"
                         }`}>
                           {c.rank}
                         </span>
-                        <span className="text-sm text-[#d0d0dc] flex-1 truncate">
+                        <span className="text-sm text-text-primary flex-1 truncate">
                           {c.title}
                         </span>
-                        <span className="text-[0.7rem] text-[#6e6e82] font-mono flex-shrink-0">
+                        <span className="text-[0.7rem] text-text-dim font-mono flex-shrink-0">
                           {c.wordCount.toLocaleString()}字
                         </span>
                       </li>
@@ -425,9 +478,9 @@ function DashboardContent() {
                 </div>
 
                 {/* Cooccurrence */}
-                <div className="bg-[#111119] border border-white/[0.06] rounded-xl p-6">
-                  <h3 className="text-sm text-[#6e6e82] font-medium mb-4 flex items-center gap-2">
-                    <TagIcon className="w-4 h-4 text-[#00e5a0]" />
+                <div className="bg-surface border border-border rounded-xl p-6">
+                  <h3 className="text-sm text-text-dim font-medium mb-4 flex items-center gap-2">
+                    <TagIcon className="w-4 h-4 text-accent" />
                     共起語・関連ワード
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
@@ -436,10 +489,10 @@ function DashboardContent() {
                         key={w.word}
                         className={`px-3 py-1.5 rounded-md text-xs ${
                           i < 5
-                            ? "border border-[rgba(0,229,160,0.2)] text-[#00e5a0]"
+                            ? "border border-[var(--color-accent-tint-border)] text-accent"
                             : i < 10
-                              ? "border border-[rgba(0,196,255,0.15)] text-[#00c4ff]"
-                              : "bg-[#181822] text-[#d0d0dc]"
+                              ? "border border-[var(--color-accent2-tint)] text-accent2"
+                              : "bg-surface2 text-text-primary"
                         }`}
                       >
                         {w.word}
@@ -451,36 +504,36 @@ function DashboardContent() {
 
               {/* Info bar */}
               <div className="flex gap-3 mb-6">
-                <div className="flex-1 bg-[#111119] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold font-mono text-[#00e5a0]">
+                <div className="flex-1 bg-surface border border-border rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold font-mono text-accent">
                     {analysis.seoTargets.avgWordCount.toLocaleString()}字
                   </div>
-                  <div className="text-xs text-[#6e6e82] mt-1">競合平均文字数</div>
+                  <div className="text-xs text-text-dim mt-1">競合平均文字数</div>
                 </div>
-                <div className="flex-1 bg-[#111119] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold font-mono text-[#00c4ff]">
+                <div className="flex-1 bg-surface border border-border rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold font-mono text-accent2">
                     {analysis.seoTargets.recommendedWordCount.toLocaleString()}字
                   </div>
-                  <div className="text-xs text-[#6e6e82] mt-1">推奨文字数</div>
+                  <div className="text-xs text-text-dim mt-1">推奨文字数</div>
                 </div>
-                <div className="flex-1 bg-[#111119] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold font-mono text-[#f0f0f6]">
+                <div className="flex-1 bg-surface border border-border rounded-xl p-4 text-center">
+                  <div className="text-2xl font-bold font-mono text-text-bright">
                     {outline.filter((o) => o.tag === "h2").length}
                   </div>
-                  <div className="text-xs text-[#6e6e82] mt-1">H2セクション数</div>
+                  <div className="text-xs text-text-dim mt-1">H2セクション数</div>
                 </div>
               </div>
 
               {/* Outline Editor */}
-              <div className="bg-[#111119] border border-white/[0.06] rounded-xl p-6 mb-6">
+              <div className="bg-surface border border-border rounded-xl p-6 mb-6">
                 <div className="flex justify-between items-center mb-5">
-                  <h3 className="text-base font-semibold text-[#f0f0f6]">
+                  <h3 className="text-base font-semibold text-text-bright">
                     📝 構成案
                   </h3>
                   <div className="flex gap-2">
                     <button
                       onClick={handleAnalyze}
-                      className="px-3 py-1.5 rounded-md text-xs bg-[#181822] border border-white/[0.06] text-[#6e6e82] hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
+                      className="px-3 py-1.5 rounded-md text-xs bg-surface2 border border-border text-text-dim hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all"
                     >
                       🔄 再生成
                     </button>
@@ -497,10 +550,10 @@ function DashboardContent() {
                       <span
                         className={`text-[0.65rem] font-bold font-mono px-2 py-0.5 rounded mt-1 flex-shrink-0 ${
                           item.tag === "h1"
-                            ? "bg-[rgba(0,229,160,0.12)] text-[#00e5a0]"
+                            ? "bg-[var(--color-accent-tint)] text-accent"
                             : item.tag === "h2"
-                              ? "bg-[rgba(0,196,255,0.12)] text-[#00c4ff]"
-                              : "bg-[rgba(255,170,44,0.1)] text-[#ffaa2c]"
+                              ? "bg-[var(--color-accent2-tint)] text-accent2"
+                              : "bg-[var(--color-warning-tint)] text-warning"
                         }`}
                       >
                         {item.tag.toUpperCase()}
@@ -511,7 +564,7 @@ function DashboardContent() {
                         type="text"
                         value={item.text}
                         onChange={(e) => updateOutlineItem(index, e.target.value)}
-                        className={`flex-1 bg-transparent border-none outline-none text-[#d0d0dc] focus:text-[#f0f0f6] ${
+                        className={`flex-1 bg-transparent border-none outline-none text-text-primary focus:text-text-bright ${
                           item.tag === "h1" ? "text-base font-semibold" : "text-sm"
                         }`}
                       />
@@ -520,26 +573,26 @@ function DashboardContent() {
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <button
                           onClick={() => moveOutlineItem(index, -1)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-[#6e6e82] hover:bg-white/[0.05] text-xs"
+                          className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:bg-hover-subtle text-xs"
                         >
                           ↑
                         </button>
                         <button
                           onClick={() => moveOutlineItem(index, 1)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-[#6e6e82] hover:bg-white/[0.05] text-xs"
+                          className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:bg-hover-subtle text-xs"
                         >
                           ↓
                         </button>
                         <button
                           onClick={() => addOutlineItem(index, "h3")}
-                          className="w-6 h-6 rounded flex items-center justify-center text-[#6e6e82] hover:bg-white/[0.05] text-xs"
+                          className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:bg-hover-subtle text-xs"
                         >
                           +
                         </button>
                         {item.tag !== "h1" && (
                           <button
                             onClick={() => removeOutlineItem(index)}
-                            className="w-6 h-6 rounded flex items-center justify-center text-[#6e6e82] hover:bg-red-500/20 hover:text-red-400 text-xs"
+                            className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:bg-red-500/20 hover:text-red-400 text-xs"
                           >
                             ×
                           </button>
@@ -555,7 +608,7 @@ function DashboardContent() {
                 <button
                   onClick={handleGenerate}
                   disabled={step === "generating"}
-                  className="px-16 py-4 rounded-xl bg-gradient-to-br from-[#00e5a0] to-[#00c88a] text-[#08080d] text-lg font-bold hover:shadow-[0_8px_40px_rgba(0,229,160,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-50 shadow-[0_4px_30px_rgba(0,229,160,0.2)]"
+                  className="px-16 py-4 rounded-xl bg-gradient-to-br from-accent to-accent-dark text-on-accent text-lg font-bold hover:shadow-[0_8px_40px_var(--color-accent-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-50 shadow-[0_4px_30px_var(--color-accent-glow)]"
                 >
                   {step === "generating" ? (
                     <span className="flex items-center gap-2">
@@ -565,8 +618,8 @@ function DashboardContent() {
                     "✨ この構成で記事を生成する"
                   )}
                 </button>
-                <div className="text-xs text-[#6e6e82] mt-3">
-                  約3分で{analysis.seoTargets.recommendedWordCount.toLocaleString()}字の記事を生成します
+                <div className="text-xs text-text-dim mt-3">
+                  約3分で{analysis.seoTargets.recommendedWordCount.toLocaleString()}字の記事を生成します（10トークン消費）
                 </div>
               </div>
             </>
@@ -576,34 +629,34 @@ function DashboardContent() {
           {step === "article" && article && (
             <>
               {/* SEO Score Bar */}
-              <div className="grid grid-cols-[160px_1fr] gap-6 bg-[#111119] border border-white/[0.06] rounded-xl p-6 mb-6 items-center max-md:grid-cols-1">
+              <div className="grid grid-cols-[160px_1fr] gap-6 bg-surface border border-border rounded-xl p-6 mb-6 items-center max-md:grid-cols-1">
                 <div className="text-center">
                   <div
                     className="w-28 h-28 rounded-full mx-auto flex items-center justify-center relative"
                     style={{
-                      background: `conic-gradient(#00e5a0 0deg, #00e5a0 ${article.seoScore.overall * 3.6}deg, #181822 ${article.seoScore.overall * 3.6}deg)`,
+                      background: `conic-gradient(var(--color-accent) 0deg, var(--color-accent) ${article.seoScore.overall * 3.6}deg, var(--color-surface2) ${article.seoScore.overall * 3.6}deg)`,
                     }}
                   >
-                    <div className="absolute inset-2 rounded-full bg-[#111119]" />
-                    <span className="relative z-10 text-3xl font-extrabold text-[#00e5a0] font-mono">
+                    <div className="absolute inset-2 rounded-full bg-surface" />
+                    <span className="relative z-10 text-3xl font-extrabold text-accent font-mono">
                       {article.seoScore.overall}
                     </span>
                   </div>
-                  <div className="text-xs text-[#6e6e82] mt-3">SEOスコア</div>
+                  <div className="text-xs text-text-dim mt-3">SEOスコア</div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <ScoreBar label="キーワード密度" value={article.seoScore.keywordDensity} color="bg-[#00e5a0]" />
-                  <ScoreBar label="共起語カバー率" value={article.seoScore.cooccurrenceCoverage} color="bg-[#00c4ff]" />
-                  <ScoreBar label="見出し構成" value={article.seoScore.headingStructure} color="bg-[#00e5a0]" />
-                  <ScoreBar label="文字数" value={article.seoScore.wordCountScore} color="bg-[#ffaa2c]"
+                  <ScoreBar label="キーワード密度" value={article.seoScore.keywordDensity} color="bg-accent" />
+                  <ScoreBar label="共起語カバー率" value={article.seoScore.cooccurrenceCoverage} color="bg-accent2" />
+                  <ScoreBar label="見出し構成" value={article.seoScore.headingStructure} color="bg-accent" />
+                  <ScoreBar label="文字数" value={article.seoScore.wordCountScore} color="bg-warning"
                     detail={`${article.seoScore.details.actualWordCount.toLocaleString()}字 / 目安 ${article.seoScore.details.targetWordCount.toLocaleString()}字`}
                   />
                 </div>
               </div>
 
               {/* Article Preview */}
-              <div className="bg-[#111119] border border-white/[0.06] rounded-xl p-8 mb-6">
-                <div className="flex gap-2 mb-4 text-xs text-[#6e6e82]">
+              <div className="bg-surface border border-border rounded-xl p-8 mb-6">
+                <div className="flex gap-2 mb-4 text-xs text-text-dim">
                   <span>📝 {article.wordCount.toLocaleString()}文字</span>
                   <span>・</span>
                   <span>⏱ 読了 約{Math.ceil(article.wordCount / 600)}分</span>
@@ -612,9 +665,9 @@ function DashboardContent() {
                 </div>
 
                 {article.metaDescription && (
-                  <div className="bg-[#181822] border border-white/[0.04] rounded-lg p-4 mb-6 text-sm">
-                    <span className="text-[0.7rem] text-[#6e6e82] block mb-1">meta description</span>
-                    <span className="text-[#d0d0dc]">{article.metaDescription}</span>
+                  <div className="bg-surface2 border border-border rounded-lg p-4 mb-6 text-sm">
+                    <span className="text-[0.7rem] text-text-dim block mb-1">meta description</span>
+                    <span className="text-text-primary">{article.metaDescription}</span>
                   </div>
                 )}
 
@@ -626,21 +679,13 @@ function DashboardContent() {
                   }}
                 />
 
-                <style jsx global>{`
-                  .prose-dark h1 { font-size: 1.6rem; font-weight: 700; color: #f0f0f6; margin: 0 0 16px; line-height: 1.4; }
-                  .prose-dark h2 { font-size: 1.15rem; font-weight: 600; color: #f0f0f6; margin: 32px 0 12px; padding-left: 12px; border-left: 3px solid #00e5a0; }
-                  .prose-dark h3 { font-size: 1rem; font-weight: 600; color: #d0d0dc; margin: 24px 0 10px; }
-                  .prose-dark p { font-size: 0.95rem; color: #d0d0dc; margin-bottom: 16px; }
-                  .prose-dark ul, .prose-dark ol { padding-left: 1.5rem; margin-bottom: 16px; color: #d0d0dc; font-size: 0.95rem; }
-                  .prose-dark li { margin-bottom: 4px; }
-                `}</style>
               </div>
 
               {/* Publish Bar */}
-              <div className="flex items-center justify-between bg-[#111119] border border-white/[0.06] rounded-xl p-5">
+              <div className="flex items-center justify-between bg-surface border border-border rounded-xl p-5">
                 <div>
-                  <div className="font-semibold text-[#f0f0f6] mb-1">記事の準備ができました ✅</div>
-                  <div className="text-xs text-[#6e6e82]">ローカルに保存、またはHTMLをコピーできます</div>
+                  <div className="font-semibold text-text-bright mb-1">記事の準備ができました ✅</div>
+                  <div className="text-xs text-text-dim">ローカルに保存、またはHTMLをコピーできます</div>
                 </div>
                 <div className="flex gap-3 items-center">
                   <button
@@ -665,13 +710,13 @@ function DashboardContent() {
                         alert(e.message);
                       }
                     }}
-                    className="px-4 py-2.5 rounded-lg text-sm bg-gradient-to-br from-[#00e5a0] to-[#00c88a] text-[#08080d] font-semibold hover:shadow-[0_4px_20px_rgba(0,229,160,0.35)] transition-all"
+                    className="px-4 py-2.5 rounded-lg text-sm bg-gradient-to-br from-accent to-accent-dark text-on-accent font-semibold hover:shadow-[0_4px_20px_var(--color-accent-glow)] transition-all"
                   >
                     💾 保存
                   </button>
                   <button
                     onClick={() => navigator.clipboard.writeText(article.content)}
-                    className="px-4 py-2.5 rounded-lg text-sm bg-[#181822] border border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
+                    className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all"
                   >
                     📋 HTMLコピー
                   </button>
@@ -681,9 +726,15 @@ function DashboardContent() {
                       navigator.clipboard.writeText(noteText);
                       alert("note用テキストをコピーしました");
                     }}
-                    className="px-4 py-2.5 rounded-lg text-sm bg-[#181822] border border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,196,255,0.2)] hover:text-[#00c4ff] transition-all"
+                    className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent2-tint)] hover:text-accent2 transition-all"
                   >
                     📝 note用
+                  </button>
+                  <button
+                    onClick={() => setShowImageModal(true)}
+                    className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all"
+                  >
+                    🎨 ヘッダー画像
                   </button>
                 </div>
               </div>
@@ -692,7 +743,7 @@ function DashboardContent() {
               <div className="text-center mt-8">
                 <button
                   onClick={handleReset}
-                  className="text-sm text-[#6e6e82] hover:text-[#00e5a0] transition-colors"
+                  className="text-sm text-text-dim hover:text-accent transition-colors"
                 >
                   ← 新しい記事を作成
                 </button>
@@ -700,6 +751,75 @@ function DashboardContent() {
             </>
           )}
         </div>
+
+        {/* Image Generate Modal */}
+        <ImageGenerateModal
+          isOpen={showImageModal}
+          onClose={() => setShowImageModal(false)}
+          title={article?.title || ""}
+          keyword={keyword}
+          content={article?.content || ""}
+          onTokensUpdated={(remaining) => {
+            setTokensRemaining(remaining);
+            window.dispatchEvent(new CustomEvent("tokens-updated", { detail: { remaining } }));
+          }}
+        />
+
+        {/* Token Purchase Modal */}
+        {showTokenModal && (
+          <div className="fixed inset-0 bg-[var(--color-backdrop)] flex items-center justify-center z-50 p-4">
+            <div className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-5">
+                <h3 className="text-lg font-bold text-text-bright">トークンが不足しています</h3>
+                <button onClick={() => setShowTokenModal(false)} className="text-text-dim hover:text-text-bright">✕</button>
+              </div>
+              <p className="text-sm text-text-dim mb-5">
+                追加トークンを購入して、記事生成・分析を続けましょう。
+              </p>
+              <div className="space-y-3">
+                {[
+                  { id: "pack50", tokens: 50, price: 500 },
+                  { id: "pack150", tokens: 150, price: 1200 },
+                  { id: "pack500", tokens: 500, price: 3500 },
+                ].map((pack) => (
+                  <button
+                    key={pack.id}
+                    onClick={async () => {
+                      try {
+                        const res = await fetch("/api/stripe/tokens", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ pack: pack.id }),
+                        });
+                        const data = await res.json();
+                        if (data.url) window.location.href = data.url;
+                        else alert(data.error || "エラーが発生しました");
+                      } catch {
+                        alert("エラーが発生しました");
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-4 rounded-xl bg-surface2 border border-border hover:border-[var(--color-accent-tint-border)] transition-all group"
+                  >
+                    <div className="text-left">
+                      <div className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">
+                        {pack.tokens}トークン
+                      </div>
+                      <div className="text-xs text-text-dim">
+                        ¥{Math.round(pack.price / pack.tokens * 10)}/10トークン
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-base font-bold text-text-bright">¥{pack.price.toLocaleString()}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[0.7rem] text-text-dim mt-4 text-center">
+                購入トークンは月間リセットなし（使い切るまで有効）
+              </p>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -719,14 +839,14 @@ function ScoreBar({
 }) {
   return (
     <div>
-      <div className="text-[0.7rem] text-[#6e6e82] mb-1">{label}</div>
-      <div className="h-1.5 rounded bg-[#181822] overflow-hidden mb-1">
+      <div className="text-[0.7rem] text-text-dim mb-1">{label}</div>
+      <div className="h-1.5 rounded bg-surface2 overflow-hidden mb-1">
         <div
           className={`h-full rounded transition-all duration-500 ${color}`}
           style={{ width: `${value}%` }}
         />
       </div>
-      <div className="text-[0.7rem] text-[#d0d0dc] font-mono">
+      <div className="text-[0.7rem] text-text-primary font-mono">
         {detail || `${value} / 100`}
       </div>
     </div>
@@ -739,7 +859,7 @@ function LoadingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="w-1.5 h-1.5 rounded-full bg-[#00e5a0]"
+          className="w-1.5 h-1.5 rounded-full bg-accent"
           style={{
             animation: "bounce 0.6s infinite alternate",
             animationDelay: `${i * 0.15}s`,

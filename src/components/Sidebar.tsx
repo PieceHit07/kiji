@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [userPlan, setUserPlan] = useState<string>("free");
+  const [tokensRemaining, setTokensRemaining] = useState<number | null>(null);
   const { data: session } = useSession();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const saved = localStorage.getItem("kiji-sidebar-collapsed");
@@ -20,10 +23,23 @@ export default function Sidebar() {
     if (session?.user) {
       fetch("/api/user")
         .then((r) => r.json())
-        .then((d) => { if (d.plan) setUserPlan(d.plan); })
+        .then((d) => {
+          if (d.plan) setUserPlan(d.plan);
+          if (d.tokens) setTokensRemaining(d.tokens.remaining);
+        })
         .catch(() => {});
     }
   }, [session]);
+
+  // 他コンポーネントからのトークン更新を受け取る
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.remaining !== undefined) setTokensRemaining(detail.remaining);
+    };
+    window.addEventListener("tokens-updated", handler);
+    return () => window.removeEventListener("tokens-updated", handler);
+  }, []);
 
   const toggle = () => {
     const next = !collapsed;
@@ -33,14 +49,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`bg-[#0c0c14] border-r border-white/[0.06] flex flex-col transition-all duration-300 max-md:hidden relative ${
+      className={`bg-sidebar border-r border-border flex flex-col transition-all duration-300 max-md:hidden relative ${
         collapsed ? "w-16 min-w-[64px] p-3" : "w-56 min-w-[224px] p-5"
       }`}
     >
       {/* Toggle Button */}
       <button
         onClick={toggle}
-        className="absolute -right-3 top-5 w-6 h-6 rounded-full bg-[#181822] border border-white/[0.1] flex items-center justify-center text-[#6e6e82] hover:text-[#00e5a0] hover:border-[rgba(0,229,160,0.3)] transition-all z-10"
+        className="absolute -right-3 top-5 w-6 h-6 rounded-full bg-surface2 border border-[var(--color-border-strong)] flex items-center justify-center text-text-dim hover:text-accent hover:border-[var(--color-accent-tint-border)] transition-all z-10"
       >
         {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
       </button>
@@ -48,19 +64,19 @@ export default function Sidebar() {
       {/* Logo */}
       <Link
         href="/dashboard"
-        className={`font-mono font-bold text-[#f0f0f6] tracking-wider mb-6 ${
+        className={`font-mono font-bold text-text-bright tracking-wider mb-6 ${
           collapsed ? "text-base text-center" : "text-xl"
         }`}
       >
         {collapsed ? (
-          <span className="text-[#00e5a0]">K</span>
+          <span className="text-accent">K</span>
         ) : (
-          <>Kiji<span className="text-[#00e5a0]">.</span></>
+          <>Kiji<span className="text-accent">.</span></>
         )}
       </Link>
 
       {!collapsed && (
-        <div className="text-[0.7rem] text-[#6e6e82] uppercase tracking-[2px] mb-3 px-2">
+        <div className="text-[0.7rem] text-text-dim uppercase tracking-[2px] mb-3 px-2">
           メイン
         </div>
       )}
@@ -71,8 +87,8 @@ export default function Sidebar() {
           collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
         } ${
           pathname === "/dashboard"
-            ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]"
-            : "text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc]"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
         }`}
       >
         <PlusIcon />
@@ -85,8 +101,8 @@ export default function Sidebar() {
           collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
         } ${
           pathname === "/articles"
-            ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]"
-            : "text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc]"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
         }`}
       >
         <ListIcon />
@@ -99,8 +115,8 @@ export default function Sidebar() {
           collapsed ? "justify-center px-2 py-2.5 mb-3" : "gap-2.5 px-3 py-2.5 mb-6"
         } ${
           pathname === "/rewrite"
-            ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]"
-            : "text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc]"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
         }`}
       >
         <RefreshIcon />
@@ -108,7 +124,7 @@ export default function Sidebar() {
       </Link>
 
       {!collapsed && (
-        <div className="text-[0.7rem] text-[#6e6e82] uppercase tracking-[2px] mb-3 px-2">
+        <div className="text-[0.7rem] text-text-dim uppercase tracking-[2px] mb-3 px-2">
           ツール
         </div>
       )}
@@ -119,8 +135,8 @@ export default function Sidebar() {
           collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
         } ${
           pathname === "/cooccurrence"
-            ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]"
-            : "text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc]"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
         }`}
       >
         <SearchIcon />
@@ -133,8 +149,8 @@ export default function Sidebar() {
           collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
         } ${
           pathname === "/ranking"
-            ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]"
-            : "text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc]"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
         }`}
       >
         <ChartIcon />
@@ -143,24 +159,63 @@ export default function Sidebar() {
 
       <div className="flex-1" />
 
+      <button
+        onClick={toggleTheme}
+        title={theme === "dark" ? "ライトモード" : "ダークモード"}
+        className={`flex items-center rounded-lg text-sm mb-1 text-text-dim hover:bg-hover-subtle hover:text-text-primary transition-colors ${
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+        }`}
+      >
+        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+        {!collapsed && <span>{theme === "dark" ? "ライトモード" : "ダークモード"}</span>}
+      </button>
+
       {/* Pricing Link */}
       <Link
         href="/pricing"
         title="料金プラン"
-        className={`flex items-center rounded-lg text-sm mb-4 ${
+        className={`flex items-center rounded-lg text-sm mb-1 ${
           collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
         } ${
           pathname === "/pricing"
-            ? "bg-[rgba(0,229,160,0.1)] text-[#00e5a0]"
-            : "text-[#6e6e82] hover:bg-white/[0.03] hover:text-[#d0d0dc]"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
         }`}
       >
         <CreditCardIcon />
         {!collapsed && <span>料金プラン</span>}
       </Link>
+      <Link
+        href="/tokens"
+        title="トークン購入"
+        className={`flex items-center rounded-lg text-sm mb-4 ${
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+        } ${
+          pathname === "/tokens"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+        }`}
+      >
+        <TokenIcon />
+        {!collapsed && <span>トークン購入</span>}
+      </Link>
+      <Link
+        href="/settings"
+        title="アカウント設定"
+        className={`flex items-center rounded-lg text-sm mb-4 ${
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+        } ${
+          pathname === "/settings"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+        }`}
+      >
+        <SettingsIcon />
+        {!collapsed && <span>アカウント設定</span>}
+      </Link>
 
       {session?.user && (
-        <div className={`pt-4 border-t border-white/[0.06] ${collapsed ? "" : "space-y-2"}`}>
+        <div className={`pt-4 border-t border-border ${collapsed ? "" : "space-y-2"}`}>
           <div
             className={`flex items-center ${
               collapsed ? "justify-center" : "gap-2.5"
@@ -173,38 +228,75 @@ export default function Sidebar() {
                 className="w-8 h-8 rounded-lg flex-shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00e5a0] to-[#00c4ff] flex items-center justify-center text-xs font-bold text-[#08080d] flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-xs font-bold text-on-accent flex-shrink-0">
                 {session.user.name?.[0] || "U"}
               </div>
             )}
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-[#d0d0dc] truncate">
+                  <span className="text-sm text-text-primary truncate">
                     {session.user.name || "User"}
                   </span>
-                  <span
-                    className={`text-[0.6rem] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
+                  {session.user.email?.toLowerCase() === process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase() ? (
+                    <button
+                      onClick={async () => {
+                        const next = userPlan === "free" ? "pro" : userPlan === "pro" ? "business" : "free";
+                        try {
+                          const res = await fetch("/api/admin/set-plan", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ plan: next }),
+                          });
+                          if (res.ok) {
+                            setUserPlan(next);
+                            setTokensRemaining(null);
+                            fetch("/api/user").then(r => r.json()).then(d => {
+                              if (d.tokens) setTokensRemaining(d.tokens.remaining);
+                            });
+                          }
+                        } catch {}
+                      }}
+                      className={`text-[0.6rem] px-1.5 py-0.5 rounded font-medium flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity ${
+                        userPlan === "business"
+                          ? "bg-[var(--color-warning-tint)] text-warning"
+                          : userPlan === "pro"
+                          ? "bg-[var(--color-accent-tint)] text-accent"
+                          : "bg-[var(--color-border)] text-text-dim"
+                      }`}
+                      title="クリックでプラン切替（dev）"
+                    >
+                      {userPlan === "business" ? "Business" : userPlan === "pro" ? "Pro" : "Free"}
+                    </button>
+                  ) : (
+                    <span className={`text-[0.6rem] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
                       userPlan === "business"
-                        ? "bg-[#ffaa2c]/15 text-[#ffaa2c]"
+                        ? "bg-[var(--color-warning-tint)] text-warning"
                         : userPlan === "pro"
-                        ? "bg-[#00e5a0]/15 text-[#00e5a0]"
-                        : "bg-white/[0.06] text-[#6e6e82]"
-                    }`}
-                  >
-                    {userPlan === "business" ? "Business" : userPlan === "pro" ? "Pro" : "Free"}
-                  </span>
+                        ? "bg-[var(--color-accent-tint)] text-accent"
+                        : "bg-[var(--color-border)] text-text-dim"
+                    }`}>
+                      {userPlan === "business" ? "Business" : userPlan === "pro" ? "Pro" : "Free"}
+                    </span>
+                  )}
                 </div>
-                <div className="text-[0.65rem] text-[#6e6e82] truncate">
+                <div className="text-[0.65rem] text-text-dim truncate">
                   {session.user.email}
                 </div>
+                {tokensRemaining !== null && (
+                  <div className={`text-[0.6rem] font-mono mt-0.5 ${
+                    tokensRemaining <= 5 ? "text-red-400" : tokensRemaining <= 20 ? "text-warning" : "text-text-dim"
+                  }`}>
+                    {`残り ${tokensRemaining} トークン`}
+                  </div>
+                )}
               </div>
             )}
           </div>
           {!collapsed && (
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-[#6e6e82] hover:bg-white/[0.03] hover:text-red-400 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-text-dim hover:bg-hover-subtle hover:text-red-400 transition-colors"
             >
               <LogoutIcon />
               ログアウト
@@ -214,7 +306,7 @@ export default function Sidebar() {
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               title="ログアウト"
-              className="w-full flex justify-center py-2 text-[#6e6e82] hover:text-red-400 transition-colors"
+              className="w-full flex justify-center py-2 text-text-dim hover:text-red-400 transition-colors"
             >
               <LogoutIcon />
             </button>
@@ -294,12 +386,47 @@ function CreditCardIcon() {
   );
 }
 
+function TokenIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx={12} cy={12} r={10} />
+      <path d="M12 6v12M8 10h8M8 14h8" />
+    </svg>
+  );
+}
+
 function LogoutIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx={12} cy={12} r={5} />
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx={12} cy={12} r={3} />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
     </svg>
   );
 }

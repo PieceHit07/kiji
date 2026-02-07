@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { getMonthlyTokens } from "@/lib/tokens";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
@@ -28,17 +29,39 @@ export async function POST(request: NextRequest) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const email = session.metadata?.email || session.customer_email;
-      const plan = session.metadata?.plan || "pro";
 
-      if (email) {
-        const limits: Record<string, number> = { pro: 30, business: 9999 };
+      if (email && session.metadata?.type === "tokens") {
+        // トークン購入
+        const tokens = parseInt(session.metadata.tokens || "0", 10);
+        if (tokens > 0) {
+          const { data: user } = await supabase
+            .from("users")
+            .select("tokens_purchased")
+            .eq("email", email)
+            .single();
+
+          await supabase
+            .from("users")
+            .update({
+              tokens_purchased: (user?.tokens_purchased || 0) + tokens,
+            })
+            .eq("email", email);
+        }
+      } else if (email) {
+        // プラン購入
+        const plan = session.metadata?.plan || "pro";
+        const nextReset = new Date();
+        nextReset.setMonth(nextReset.getMonth() + 1);
+
         await supabase
           .from("users")
           .update({
             plan,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
-            articles_limit: limits[plan] || 30,
+            tokens_monthly: getMonthlyTokens(plan),
+            tokens_used: 0,
+            tokens_reset_at: nextReset.toISOString(),
           })
           .eq("email", email);
       }
@@ -54,7 +77,8 @@ export async function POST(request: NextRequest) {
         .update({
           plan: "free",
           stripe_subscription_id: null,
-          articles_limit: 3,
+          tokens_monthly: 20,
+          tokens_used: 0,
         })
         .eq("stripe_customer_id", customerId);
       break;

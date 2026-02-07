@@ -5,14 +5,78 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap");
 
 :root {
-  --bg: #08080d;
-  --surface: #111119;
-  --accent: #00e5a0;
+  /* Backgrounds */
+  --color-bg: #08080d;
+  --color-sidebar: #0c0c14;
+  --color-surface: #111119;
+  --color-surface2: #181822;
+
+  /* Text */
+  --color-text-bright: #f0f0f6;
+  --color-text-primary: #d0d0dc;
+  --color-text-dim: #6e6e82;
+
+  /* Accents */
+  --color-accent: #00e5a0;
+  --color-accent-dark: #00c88a;
+  --color-accent2: #00c4ff;
+  --color-warning: #ffaa2c;
+  --color-on-accent: #08080d;
+
+  /* Borders & overlays */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.1);
+  --color-hover-subtle: rgba(255, 255, 255, 0.03);
+  --color-hover-strong: rgba(255, 255, 255, 0.1);
+
+  /* Accent tints */
+  --color-accent-tint: rgba(0, 229, 160, 0.1);
+  --color-accent-tint-border: rgba(0, 229, 160, 0.3);
+  --color-accent2-tint: rgba(0, 196, 255, 0.15);
+  --color-warning-tint: rgba(255, 170, 44, 0.15);
+  --color-accent-glow: rgba(0, 229, 160, 0.35);
+  --color-accent-glow-soft: rgba(0, 229, 160, 0.08);
+
+  /* Misc */
+  --color-scrollbar: rgba(255, 255, 255, 0.08);
+  --color-backdrop: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] {
+  --color-bg: #f5f6f8;
+  --color-sidebar: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface2: #eef0f4;
+
+  --color-text-bright: #111119;
+  --color-text-primary: #3a3a4a;
+  --color-text-dim: #7a7a8e;
+
+  --color-accent: #00b87a;
+  --color-accent-dark: #009a66;
+  --color-accent2: #0088bb;
+  --color-warning: #d48a10;
+  --color-on-accent: #ffffff;
+
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
+  --color-hover-subtle: rgba(0, 0, 0, 0.04);
+  --color-hover-strong: rgba(0, 0, 0, 0.08);
+
+  --color-accent-tint: rgba(0, 184, 122, 0.1);
+  --color-accent-tint-border: rgba(0, 184, 122, 0.3);
+  --color-accent2-tint: rgba(0, 136, 187, 0.1);
+  --color-warning-tint: rgba(212, 138, 16, 0.1);
+  --color-accent-glow: rgba(0, 184, 122, 0.2);
+  --color-accent-glow-soft: rgba(0, 184, 122, 0.06);
+
+  --color-scrollbar: rgba(0, 0, 0, 0.15);
+  --color-backdrop: rgba(0, 0, 0, 0.3);
 }
 
 body {
-  background: var(--bg);
-  color: #d0d0dc;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 ::-webkit-scrollbar {
@@ -22,6 +86,28 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-scrollbar);
   border-radius: 4px;
 }
+
+/* Prose styles (shared across dashboard, articles, rewrite) */
+.prose-dark h1 { font-size: 1.6rem; font-weight: 700; color: var(--color-text-bright); margin: 1.5em 0 0.6em; line-height: 1.4; }
+.prose-dark h2 { font-size: 1.3rem; font-weight: 700; color: var(--color-text-bright); margin: 2em 0 0.6em; padding-left: 0.8em; border-left: 3px solid var(--color-accent); line-height: 1.4; }
+.prose-dark h3 { font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary); margin: 1.5em 0 0.5em; line-height: 1.4; }
+.prose-dark h4 { font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin: 1.2em 0 0.4em; }
+.prose-dark p { color: var(--color-text-primary); line-height: 1.9; margin: 0.8em 0; font-size: 0.95rem; }
+.prose-dark ul, .prose-dark ol { color: var(--color-text-primary); margin: 0.8em 0; padding-left: 1.5em; line-height: 1.9; }
+.prose-dark li { margin: 0.3em 0; }
+.prose-dark strong { color: var(--color-text-bright); font-weight: 600; }
+.prose-dark a { color: var(--color-accent); text-decoration: underline; }
+.prose-dark blockquote { border-left: 3px solid var(--color-accent); padding-left: 1em; color: var(--color-text-dim); margin: 1em 0; font-style: italic; }
+.prose-dark table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.prose-dark th, .prose-dark td { border: 1px solid var(--color-border); padding: 0.6em 1em; text-align: left; font-size: 0.9rem; }
+.prose-dark th { background: var(--color-surface2); color: var(--color-text-bright); font-weight: 600; }
+
+.prose-preview h1 { font-size: 1.2rem; font-weight: 700; color: var(--color-text-bright); margin: 0.8em 0 0.3em; }
+.prose-preview h2 { font-size: 1.1rem; font-weight: 700; color: var(--color-text-bright); margin: 0.8em 0 0.3em; padding-left: 0.6em; border-left: 2px solid var(--color-accent); }
+.prose-preview h3 { font-size: 1rem; font-weight: 600; color: var(--color-text-primary); margin: 0.6em 0 0.2em; }
+.prose-preview p { color: var(--color-text-dim); font-size: 0.85rem; line-height: 1.7; margin: 0.4em 0; }
+.prose-preview ul, .prose-preview ol { color: var(--color-text-dim); font-size: 0.85rem; padding-left: 1.2em; }
+.prose-preview strong { color: var(--color-text-primary); }

@@ -91,13 +91,13 @@ function RewriteContent() {
   return (
     <>
       <h1 className="text-2xl font-bold mb-2">記事リライト</h1>
-      <p className="text-[#6e6e82] mb-6">
+      <p className="text-text-dim mb-6">
         既存の記事をAIでリライトして品質を向上させます
       </p>
 
       {/* Instruction */}
       <div className="mb-6">
-        <label className="text-sm text-[#6e6e82] block mb-2">
+        <label className="text-sm text-text-dim block mb-2">
           リライト指示（任意）
         </label>
         <input
@@ -105,7 +105,7 @@ function RewriteContent() {
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
           placeholder="例：もっとカジュアルな文体にして、具体例を増やす"
-          className="w-full px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#f0f0f6] outline-none focus:border-[#00e5a0] transition-colors"
+          className="w-full px-4 py-3 rounded-xl bg-surface border border-border text-text-bright outline-none focus:border-accent transition-colors"
         />
       </div>
 
@@ -121,12 +121,12 @@ function RewriteContent() {
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">元の記事</h2>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-[#6e6e82]">
+              <span className="text-xs text-text-dim">
                 {wordCount.original.toLocaleString()}文字
               </span>
               <button
                 onClick={() => setEditMode(!editMode)}
-                className="text-xs px-2 py-1 rounded bg-[#181822] border border-white/[0.06] text-[#6e6e82] hover:text-[#00e5a0] hover:border-[rgba(0,229,160,0.2)] transition-all"
+                className="text-xs px-2 py-1 rounded bg-surface2 border border-border text-text-dim hover:text-accent hover:border-[var(--color-accent-tint-border)] transition-all"
               >
                 {editMode ? "プレビュー" : "HTML編集"}
               </button>
@@ -141,17 +141,17 @@ function RewriteContent() {
                 setWordCount((prev) => ({ ...prev, original: textOnly.length }));
               }}
               placeholder="リライトする記事のHTMLを貼り付けてください..."
-              className="w-full h-[500px] px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#d0d0dc] text-sm font-mono outline-none focus:border-[#00e5a0] transition-colors resize-none"
+              className="w-full h-[500px] px-4 py-3 rounded-xl bg-surface border border-border text-text-primary text-sm font-mono outline-none focus:border-accent transition-colors resize-none"
             />
           ) : (
-            <div className="w-full h-[500px] px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#d0d0dc] text-sm overflow-auto">
+            <div className="w-full h-[500px] px-4 py-3 rounded-xl bg-surface border border-border text-text-primary text-sm overflow-auto">
               {originalContent ? (
                 <div
                   className="prose-dark"
                   dangerouslySetInnerHTML={{ __html: originalContent }}
                 />
               ) : (
-                <p className="text-[#6e6e82]">
+                <p className="text-text-dim">
                   「HTML編集」をクリックしてHTMLを貼り付けてください
                 </p>
               )}
@@ -164,14 +164,14 @@ function RewriteContent() {
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">リライト後</h2>
             {rewrittenContent && (
-              <span className="text-xs text-[#6e6e82]">
+              <span className="text-xs text-text-dim">
                 {wordCount.rewritten.toLocaleString()}文字
                 {wordCount.original > 0 && (
                   <span
                     className={`ml-2 ${
                       wordCount.rewritten > wordCount.original
-                        ? "text-[#00e5a0]"
-                        : "text-[#ffaa2c]"
+                        ? "text-accent"
+                        : "text-warning"
                     }`}
                   >
                     ({wordCount.rewritten > wordCount.original ? "+" : ""}
@@ -186,14 +186,14 @@ function RewriteContent() {
               </span>
             )}
           </div>
-          <div className="w-full h-[500px] px-4 py-3 rounded-xl bg-[#111119] border border-white/[0.06] text-[#d0d0dc] text-sm overflow-auto">
+          <div className="w-full h-[500px] px-4 py-3 rounded-xl bg-surface border border-border text-text-primary text-sm overflow-auto">
             {rewrittenContent ? (
               <div
                 className="prose-dark"
                 dangerouslySetInnerHTML={{ __html: rewrittenContent }}
               />
             ) : (
-              <p className="text-[#6e6e82]">
+              <p className="text-text-dim">
                 リライト結果がここに表示されます
               </p>
             )}
@@ -206,7 +206,7 @@ function RewriteContent() {
         <button
           onClick={handleRewrite}
           disabled={loading || !originalContent.trim()}
-          className="px-8 py-3 rounded-xl bg-gradient-to-br from-[#00e5a0] to-[#00c88a] text-[#08080d] font-semibold disabled:opacity-50"
+          className="px-8 py-3 rounded-xl bg-gradient-to-br from-accent to-accent-dark text-on-accent font-semibold disabled:opacity-50"
         >
           {loading ? "リライト中..." : "✨ リライトする"}
         </button>
@@ -214,37 +214,30 @@ function RewriteContent() {
           <>
             <button
               onClick={saveArticle}
-              className="px-6 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#d0d0dc] font-semibold hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
+              className="px-6 py-3 rounded-xl bg-surface2 border border-border text-text-primary font-semibold hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all"
             >
               💾 保存
             </button>
             <button
               onClick={() => copyHtml(rewrittenContent)}
-              className="px-6 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#d0d0dc] font-semibold hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all"
+              className="px-6 py-3 rounded-xl bg-surface2 border border-border text-text-primary font-semibold hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all"
             >
               📋 HTMLコピー
             </button>
           </>
         )}
       </div>
-
-      <style jsx global>{`
-        .prose-dark h1 { font-size: 1.4rem; font-weight: 700; color: #f0f0f6; margin: 0 0 12px; }
-        .prose-dark h2 { font-size: 1.1rem; font-weight: 600; color: #f0f0f6; margin: 20px 0 8px; padding-left: 10px; border-left: 3px solid #00e5a0; }
-        .prose-dark h3 { font-size: 1rem; font-weight: 600; color: #d0d0dc; margin: 16px 0 6px; }
-        .prose-dark p { font-size: 0.875rem; color: #d0d0dc; margin-bottom: 12px; line-height: 1.7; }
-      `}</style>
     </>
   );
 }
 
 export default function RewritePage() {
   return (
-    <div className="flex h-screen bg-[#08080d] text-[#f0f0f6]">
+    <div className="flex h-screen bg-bg text-text-bright">
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-6xl mx-auto">
-          <Suspense fallback={<div className="text-[#6e6e82]">読み込み中...</div>}>
+          <Suspense fallback={<div className="text-text-dim">読み込み中...</div>}>
             <RewriteContent />
           </Suspense>
         </div>

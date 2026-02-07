@@ -7,4 +7,4 @@ Disallow: /rewrite
 Disallow: /cooccurrence
 Disallow: /ranking
 
-Sitemap: https://kiji.app/sitemap.xml
+Sitemap: https://kiji-ai.app/sitemap.xml

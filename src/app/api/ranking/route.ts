@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { consumeTokens } from "@/lib/tokens";
 
 export const maxDuration = 30;
 
 // キーワードの検索順位をチェック
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "未認証" }, { status: 401 });
+  }
+
+  const tokenResult = await consumeTokens(session.user.email, "ranking");
+  if (!tokenResult.success) {
+    return NextResponse.json(
+      { error: "トークンが不足しています", needTokens: true, remaining: tokenResult.remaining },
+      { status: 403 }
+    );
   }
 
   const body = await request.json();

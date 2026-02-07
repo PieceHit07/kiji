@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 // メールからuser_idを取得（なければAuth Admin APIで作成）
@@ -31,7 +32,7 @@ async function getUserId(email: string): Promise<string | null> {
 
 // 記事一覧取得
 export async function GET() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "未認証" }, { status: 401 });
   }
@@ -68,7 +69,7 @@ export async function GET() {
 
 // 記事保存
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "未認証" }, { status: 401 });
   }
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
 
 // 記事削除
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "未認証" }, { status: 401 });
   }

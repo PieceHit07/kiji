@@ -7,16 +7,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-12-18.acacia" as Stripe.LatestApiVersion,
 });
 
-// Stripeダッシュボードで作成済みの価格ID
-const priceIds: Record<string, { monthly: string; yearly: string }> = {
-  pro: {
-    monthly: "price_1Sy4JWRQjMzw73lJHaoB3XUB",
-    yearly: "price_1Sy4JXRQjMzw73lJ8nUFZbhC",
-  },
-  business: {
-    monthly: "price_1Sy4JXRQjMzw73lJn2FYZwlN",
-    yearly: "price_1Sy4JXRQjMzw73lJT1cMuTmb",
-  },
+// トークンパック定義
+const tokenPacks: Record<string, { tokens: number; price: number; name: string }> = {
+  pack50: { tokens: 50, price: 500, name: "50トークンパック" },
+  pack150: { tokens: 150, price: 1200, name: "150トークンパック" },
+  pack500: { tokens: 500, price: 3500, name: "500トークンパック" },
 };
 
 export async function POST(request: NextRequest) {
@@ -26,32 +21,39 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { plan, billing } = body as { plan: string; billing: "monthly" | "yearly" };
+  const { pack } = body as { pack: string };
 
-  const prices = priceIds[plan];
-  if (!prices) {
-    return NextResponse.json({ error: "無効なプランです" }, { status: 400 });
+  const selected = tokenPacks[pack];
+  if (!selected) {
+    return NextResponse.json({ error: "無効なパックです" }, { status: 400 });
   }
-
-  const priceId = billing === "yearly" ? prices.yearly : prices.monthly;
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode: "payment",
       customer_email: session.user.email,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        {
+          price_data: {
+            currency: "jpy",
+            product_data: { name: selected.name },
+            unit_amount: selected.price,
+          },
+          quantity: 1,
+        },
+      ],
       metadata: {
-        plan,
-        billing,
+        type: "tokens",
+        tokens: String(selected.tokens),
         email: session.user.email,
       },
-      success_url: `${process.env.NEXTAUTH_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXTAUTH_URL}/dashboard?tokens_purchased=${selected.tokens}`,
       cancel_url: `${process.env.NEXTAUTH_URL}/pricing`,
     });
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
-    console.error("Stripe checkout error:", error);
+    console.error("Token checkout error:", error);
     return NextResponse.json({ error: "決済の作成に失敗しました" }, { status: 500 });
   }
 }

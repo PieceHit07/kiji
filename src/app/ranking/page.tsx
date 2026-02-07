@@ -90,14 +90,14 @@ export default function RankingPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#08080d] text-[#f0f0f6]">
+    <div className="flex h-screen bg-bg text-text-bright">
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-5xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-2xl font-bold mb-2">順位トラッキング</h1>
-              <p className="text-[#6e6e82]">
+              <p className="text-text-dim">
                 キーワードの検索順位を追跡します
               </p>
             </div>
@@ -105,7 +105,7 @@ export default function RankingPage() {
               <button
                 onClick={refreshAll}
                 disabled={loading !== null}
-                className="px-4 py-2 rounded-lg bg-[#181822] border border-white/[0.06] text-[#d0d0dc] text-sm hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-surface2 border border-border text-text-primary text-sm hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all disabled:opacity-50"
               >
                 {loading ? "チェック中..." : "一括チェック"}
               </button>
@@ -113,26 +113,26 @@ export default function RankingPage() {
           </div>
 
           {/* 追加フォーム */}
-          <div className="bg-[#111119] border border-white/[0.06] rounded-xl p-6 mb-6">
+          <div className="bg-surface border border-border rounded-xl p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
               <input
                 type="text"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 placeholder="キーワード（例: SEO対策）"
-                className="px-4 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-sm outline-none focus:border-[#00e5a0] transition-colors placeholder:text-[#6e6e82]"
+                className="px-4 py-3 rounded-xl bg-surface2 border border-border text-text-bright text-sm outline-none focus:border-accent transition-colors placeholder:text-text-dim"
               />
               <input
                 type="url"
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
                 placeholder="対象URL（例: https://example.com）"
-                className="px-4 py-3 rounded-xl bg-[#181822] border border-white/[0.06] text-[#f0f0f6] text-sm outline-none focus:border-[#00e5a0] transition-colors placeholder:text-[#6e6e82]"
+                className="px-4 py-3 rounded-xl bg-surface2 border border-border text-text-bright text-sm outline-none focus:border-accent transition-colors placeholder:text-text-dim"
               />
               <button
                 onClick={addKeyword}
                 disabled={!keyword.trim() || !targetUrl.trim() || loading !== null}
-                className="px-6 py-3 rounded-xl bg-gradient-to-br from-[#00e5a0] to-[#00c88a] text-[#08080d] font-semibold text-sm whitespace-nowrap disabled:opacity-50"
+                className="px-6 py-3 rounded-xl bg-gradient-to-br from-accent to-accent-dark text-on-accent font-semibold text-sm whitespace-nowrap disabled:opacity-50"
               >
                 + 追加
               </button>
@@ -141,8 +141,8 @@ export default function RankingPage() {
 
           {/* トラッキング一覧 */}
           {tracked.length === 0 ? (
-            <div className="bg-[#111119] border border-white/[0.06] rounded-xl p-12 text-center">
-              <p className="text-[#6e6e82]">
+            <div className="bg-surface border border-border rounded-xl p-12 text-center">
+              <p className="text-text-dim">
                 キーワードとURLを登録して順位チェックを始めましょう
               </p>
             </div>
@@ -161,7 +161,7 @@ export default function RankingPage() {
                 return (
                   <div
                     key={`${t.keyword}:${t.targetUrl}`}
-                    className="bg-[#111119] border border-white/[0.06] rounded-xl overflow-hidden"
+                    className="bg-surface border border-border rounded-xl overflow-hidden"
                   >
                     {/* メイン行 */}
                     <div className="flex items-center gap-4 p-5">
@@ -171,26 +171,26 @@ export default function RankingPage() {
                           <div
                             className={`text-3xl font-bold font-mono ${
                               latest.position <= 3
-                                ? "text-[#00e5a0]"
+                                ? "text-accent"
                                 : latest.position <= 10
-                                ? "text-[#00c4ff]"
-                                : "text-[#ffaa2c]"
+                                ? "text-accent2"
+                                : "text-warning"
                             }`}
                           >
                             {latest.position}
-                            <span className="text-xs text-[#6e6e82]">位</span>
+                            <span className="text-xs text-text-dim">位</span>
                           </div>
                         ) : (
-                          <div className="text-lg text-[#6e6e82]">圏外</div>
+                          <div className="text-lg text-text-dim">圏外</div>
                         )}
                         {diff !== null && (
                           <div
                             className={`text-xs mt-1 ${
                               diff > 0
-                                ? "text-[#00e5a0]"
+                                ? "text-accent"
                                 : diff < 0
                                 ? "text-red-400"
-                                : "text-[#6e6e82]"
+                                : "text-text-dim"
                             }`}
                           >
                             {diff > 0 ? `+${diff}` : diff === 0 ? "→" : diff}
@@ -200,14 +200,14 @@ export default function RankingPage() {
 
                       {/* キーワード情報 */}
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-[#f0f0f6] mb-1">
+                        <div className="font-semibold text-text-bright mb-1">
                           {t.keyword}
                         </div>
-                        <div className="text-xs text-[#6e6e82] truncate">
+                        <div className="text-xs text-text-dim truncate">
                           {t.targetUrl}
                         </div>
                         {latest && (
-                          <div className="text-[0.65rem] text-[#6e6e82] mt-1">
+                          <div className="text-[0.65rem] text-text-dim mt-1">
                             最終チェック:{" "}
                             {new Date(latest.checkedAt).toLocaleString("ja-JP")}
                           </div>
@@ -219,7 +219,7 @@ export default function RankingPage() {
                         <button
                           onClick={() => checkRanking(t.keyword, t.targetUrl)}
                           disabled={loading !== null}
-                          className="px-3 py-1.5 rounded-lg text-xs bg-[#181822] border border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,229,160,0.2)] hover:text-[#00e5a0] transition-all disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg text-xs bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all disabled:opacity-50"
                         >
                           {loading === t.keyword ? "..." : "チェック"}
                         </button>
@@ -227,13 +227,13 @@ export default function RankingPage() {
                           onClick={() =>
                             setExpandedKw(isExpanded ? null : `${t.keyword}:${t.targetUrl}`)
                           }
-                          className="px-3 py-1.5 rounded-lg text-xs bg-[#181822] border border-white/[0.06] text-[#d0d0dc] hover:border-[rgba(0,196,255,0.2)] hover:text-[#00c4ff] transition-all"
+                          className="px-3 py-1.5 rounded-lg text-xs bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent2-tint)] hover:text-accent2 transition-all"
                         >
                           {isExpanded ? "閉じる" : "詳細"}
                         </button>
                         <button
                           onClick={() => removeKeyword(t.keyword, t.targetUrl)}
-                          className="px-3 py-1.5 rounded-lg text-xs bg-[#181822] border border-white/[0.06] text-[#6e6e82] hover:border-red-500/20 hover:text-red-400 transition-all"
+                          className="px-3 py-1.5 rounded-lg text-xs bg-surface2 border border-border text-text-dim hover:border-red-500/20 hover:text-red-400 transition-all"
                         >
                           削除
                         </button>
@@ -242,8 +242,8 @@ export default function RankingPage() {
 
                     {/* 詳細展開 */}
                     {isExpanded && latest && (
-                      <div className="border-t border-white/[0.06] p-5">
-                        <h4 className="text-sm text-[#6e6e82] mb-3">
+                      <div className="border-t border-border p-5">
+                        <h4 className="text-sm text-text-dim mb-3">
                           検索結果 TOP10
                         </h4>
                         <div className="space-y-1">
@@ -254,22 +254,22 @@ export default function RankingPage() {
                                 key={r.rank}
                                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
                                   isTarget
-                                    ? "bg-[rgba(0,229,160,0.05)] border border-[rgba(0,229,160,0.15)]"
+                                    ? "bg-[var(--color-accent-tint)] border border-[var(--color-accent-tint-border)]"
                                     : ""
                                 }`}
                               >
                                 <span
                                   className={`w-6 text-center font-mono text-xs font-bold ${
-                                    r.rank <= 3 ? "text-[#00e5a0]" : "text-[#6e6e82]"
+                                    r.rank <= 3 ? "text-accent" : "text-text-dim"
                                   }`}
                                 >
                                   {r.rank}
                                 </span>
-                                <span className="flex-1 truncate text-[#d0d0dc]">
+                                <span className="flex-1 truncate text-text-primary">
                                   {r.title}
                                 </span>
                                 {isTarget && (
-                                  <span className="text-[0.65rem] text-[#00e5a0] bg-[rgba(0,229,160,0.1)] px-2 py-0.5 rounded flex-shrink-0">
+                                  <span className="text-[0.65rem] text-accent bg-[var(--color-accent-tint)] px-2 py-0.5 rounded flex-shrink-0">
                                     自サイト
                                   </span>
                                 )}
@@ -281,7 +281,7 @@ export default function RankingPage() {
                         {/* 履歴 */}
                         {t.results.length > 1 && (
                           <div className="mt-5">
-                            <h4 className="text-sm text-[#6e6e82] mb-3">
+                            <h4 className="text-sm text-text-dim mb-3">
                               順位推移
                             </h4>
                             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -294,16 +294,16 @@ export default function RankingPage() {
                                     className={`text-lg font-bold font-mono ${
                                       r.position
                                         ? r.position <= 3
-                                          ? "text-[#00e5a0]"
+                                          ? "text-accent"
                                           : r.position <= 10
-                                          ? "text-[#00c4ff]"
-                                          : "text-[#ffaa2c]"
-                                        : "text-[#6e6e82]"
+                                          ? "text-accent2"
+                                          : "text-warning"
+                                        : "text-text-dim"
                                     }`}
                                   >
                                     {r.position || "-"}
                                   </div>
-                                  <div className="text-[0.6rem] text-[#6e6e82]">
+                                  <div className="text-[0.6rem] text-text-dim">
                                     {new Date(r.checkedAt).toLocaleDateString(
                                       "ja-JP",
                                       { month: "numeric", day: "numeric" }

@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { generateArticle } from "@/lib/generator";
+import { consumeTokens } from "@/lib/tokens";
 import type { OutlineItem, GenerateOptions } from "@/lib/generator";
 
 export const maxDuration = 60; // 記事生成は時間がかかる
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "未認証" }, { status: 401 });
+    }
+
+    const tokenResult = await consumeTokens(session.user.email, "generate");
+    if (!tokenResult.success) {
+      return NextResponse.json(
+        { error: "トークンが不足しています", needTokens: true, remaining: tokenResult.remaining },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { keyword, outline, cooccurrence, targetWordCount, customPrompt, referenceUrl, tone } = body;
 
