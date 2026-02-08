@@ -692,7 +692,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between bg-surface border border-border rounded-xl p-5">
                 <div>
                   <div className="font-semibold text-text-bright mb-1">記事の準備ができました ✅</div>
-                  <div className="text-xs text-text-dim">ローカルに保存、またはHTMLをコピーできます</div>
+                  <div className="text-xs text-text-dim">保存、HTMLコピー{wpConnected ? "、WordPress投稿" : ""}ができます</div>
                 </div>
                 <div className="flex gap-3 items-center">
                   <button
@@ -723,16 +723,37 @@ function DashboardContent() {
                   >
                     💾 保存
                   </button>
-                  {wpConnected && savedArticleId && (
+                  {wpConnected && (
                     <button
                       onClick={async () => {
                         setWpPublishing(true);
                         setWpResult(null);
                         try {
+                          // 未保存なら先に保存
+                          let artId = savedArticleId;
+                          if (!artId) {
+                            const saveRes = await fetch("/api/articles", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                keyword: analysis?.keyword || "",
+                                title: article.title,
+                                meta_description: article.metaDescription,
+                                content: article.content,
+                                word_count: article.wordCount,
+                                seo_score: article.seoScore.overall,
+                                seo_score_details: article.seoScore,
+                              }),
+                            });
+                            if (!saveRes.ok) throw new Error("保存に失敗しました");
+                            const saveData = await saveRes.json();
+                            artId = saveData.id;
+                            setSavedArticleId(saveData.id);
+                          }
                           const res = await fetch("/api/wordpress/publish", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ articleId: savedArticleId }),
+                            body: JSON.stringify({ articleId: artId }),
                           });
                           const data = await res.json();
                           if (data.success) {
@@ -751,7 +772,7 @@ function DashboardContent() {
                         }
                       }}
                       disabled={wpPublishing}
-                      className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all disabled:opacity-50"
+                      className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-blue-500/30 hover:text-blue-400 transition-all disabled:opacity-50"
                     >
                       {wpPublishing ? "投稿中..." : "🌐 WP下書き投稿"}
                     </button>
