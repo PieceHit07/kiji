@@ -96,6 +96,12 @@ function DashboardContent() {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
 
+  // WordPress
+  const [wpConnected, setWpConnected] = useState(false);
+  const [savedArticleId, setSavedArticleId] = useState<string | null>(null);
+  const [wpPublishing, setWpPublishing] = useState(false);
+  const [wpResult, setWpResult] = useState<{ type: "success" | "error"; text: string; editUrl?: string } | null>(null);
+
   const { data: session } = useSession();
   const autoAnalyzeRef = useRef(false);
   const searchParams = useSearchParams();
@@ -109,6 +115,7 @@ function DashboardContent() {
           setTokensRemaining(d.tokens.remaining);
           window.dispatchEvent(new CustomEvent("tokens-updated", { detail: d.tokens }));
         }
+        setWpConnected(!!d.wordpress);
       })
       .catch(() => {});
   }, []);
@@ -705,6 +712,8 @@ function DashboardContent() {
                           }),
                         });
                         if (!res.ok) throw new Error("保存に失敗しました");
+                        const data = await res.json();
+                        setSavedArticleId(data.id);
                         alert("記事を保存しました");
                       } catch (e: any) {
                         alert(e.message);
@@ -714,6 +723,39 @@ function DashboardContent() {
                   >
                     💾 保存
                   </button>
+                  {wpConnected && savedArticleId && (
+                    <button
+                      onClick={async () => {
+                        setWpPublishing(true);
+                        setWpResult(null);
+                        try {
+                          const res = await fetch("/api/wordpress/publish", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ articleId: savedArticleId }),
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            setWpResult({
+                              type: "success",
+                              text: data.isUpdate ? "WordPressの下書きを更新しました" : "WordPressに下書き投稿しました",
+                              editUrl: data.wpEditUrl,
+                            });
+                          } else {
+                            setWpResult({ type: "error", text: data.error });
+                          }
+                        } catch {
+                          setWpResult({ type: "error", text: "WordPress投稿に失敗しました" });
+                        } finally {
+                          setWpPublishing(false);
+                        }
+                      }}
+                      disabled={wpPublishing}
+                      className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all disabled:opacity-50"
+                    >
+                      {wpPublishing ? "投稿中..." : "🌐 WP下書き投稿"}
+                    </button>
+                  )}
                   <button
                     onClick={() => navigator.clipboard.writeText(article.content)}
                     className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent-tint-border)] hover:text-accent transition-all"
@@ -738,6 +780,27 @@ function DashboardContent() {
                   </button>
                 </div>
               </div>
+
+              {/* WordPress result */}
+              {wpResult && (
+                <div className={`mt-4 p-4 rounded-xl text-sm ${
+                  wpResult.type === "success"
+                    ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                    : "bg-red-500/10 border border-red-500/20 text-red-400"
+                }`}>
+                  {wpResult.text}
+                  {wpResult.editUrl && (
+                    <a
+                      href={wpResult.editUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-3 underline hover:no-underline"
+                    >
+                      WP管理画面で確認 →
+                    </a>
+                  )}
+                </div>
+              )}
 
               {/* New article button */}
               <div className="text-center mt-8">

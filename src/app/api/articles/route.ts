@@ -45,7 +45,7 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("articles")
-    .select("id, keyword, title, content, seo_score, created_at")
+    .select("id, keyword, title, content, seo_score, created_at, wp_post_id, wp_url")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -62,6 +62,8 @@ export async function GET() {
     word_count: a.seo_score?.details?.actualWordCount || 0,
     seo_score: a.seo_score?.overall || 0,
     created_at: a.created_at,
+    wp_post_id: a.wp_post_id || null,
+    wp_url: a.wp_url || null,
   }));
 
   return NextResponse.json(formatted);

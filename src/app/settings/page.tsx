@@ -12,12 +12,23 @@ export default function SettingsPage() {
   } | null>(null);
   const { data: session } = useSession();
 
+  // WordPress連携
+  const [wpSiteUrl, setWpSiteUrl] = useState("");
+  const [wpUsername, setWpUsername] = useState("");
+  const [wpAppPassword, setWpAppPassword] = useState("");
+  const [wpConnected, setWpConnected] = useState<{ siteUrl: string; username: string } | null>(null);
+  const [wpTesting, setWpTesting] = useState(false);
+  const [wpMessage, setWpMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   useEffect(() => {
     if (session?.user) {
       fetch("/api/user")
         .then((r) => r.json())
         .then((d) => {
           setUserInfo({ plan: d.plan, tokens: d.tokens });
+          if (d.wordpress) {
+            setWpConnected(d.wordpress);
+          }
         })
         .catch(() => {});
     }
@@ -39,6 +50,42 @@ export default function SettingsPage() {
       alert("エラーが発生しました");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const testWordPress = async () => {
+    setWpTesting(true);
+    setWpMessage(null);
+    try {
+      const res = await fetch("/api/wordpress/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteUrl: wpSiteUrl, username: wpUsername, appPassword: wpAppPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWpConnected({ siteUrl: data.siteUrl, username: wpUsername });
+        setWpSiteUrl("");
+        setWpUsername("");
+        setWpAppPassword("");
+        setWpMessage({ type: "success", text: `${data.siteName} に接続しました` });
+      } else {
+        setWpMessage({ type: "error", text: data.error });
+      }
+    } catch {
+      setWpMessage({ type: "error", text: "接続に失敗しました" });
+    } finally {
+      setWpTesting(false);
+    }
+  };
+
+  const disconnectWordPress = async () => {
+    try {
+      await fetch("/api/wordpress/test", { method: "DELETE" });
+      setWpConnected(null);
+      setWpMessage(null);
+    } catch {
+      setWpMessage({ type: "error", text: "解除に失敗しました" });
     }
   };
 
@@ -148,6 +195,133 @@ export default function SettingsPage() {
                 トークン購入
               </a>
             </div>
+          </div>
+
+          {/* WordPress連携 */}
+          <div className="bg-surface border border-border rounded-xl p-6 mb-6 relative">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-base font-semibold text-text-bright">WordPress連携</h2>
+              {!isPaid && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--color-accent-tint)] text-accent font-medium">
+                  Pro
+                </span>
+              )}
+            </div>
+
+            {!isPaid ? (
+              <div className="relative">
+                <div className="opacity-40 pointer-events-none select-none">
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-sm text-text-primary mb-1">サイトURL</label>
+                      <div className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-text-dim text-sm">
+                        https://example.com
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-text-primary mb-1">ユーザー名</label>
+                      <div className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-text-dim text-sm">
+                        admin
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-text-primary mb-1">アプリケーションパスワード</label>
+                      <div className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-text-dim text-sm">
+                        ••••••••••••
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2.5 rounded-xl text-sm font-medium bg-accent text-on-accent w-fit">
+                    接続テスト
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-3xl mb-2">🔒</div>
+                  <p className="text-sm text-text-primary font-medium mb-1">Proプラン以上で利用可能</p>
+                  <p className="text-xs text-text-dim mb-3">記事をWordPressに直接下書き投稿できます</p>
+                  <a
+                    href="/pricing"
+                    className="px-4 py-2 rounded-xl text-sm font-medium bg-accent text-on-accent hover:bg-accent-dark transition-colors"
+                  >
+                    アップグレード
+                  </a>
+                </div>
+              </div>
+            ) : wpConnected ? (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-sm px-3 py-1 rounded-lg font-medium bg-green-500/10 text-green-400">
+                    接続済み
+                  </span>
+                  <span className="text-sm text-text-primary">{wpConnected.siteUrl}</span>
+                </div>
+                <p className="text-sm text-text-dim mb-4">
+                  ユーザー: {wpConnected.username}
+                </p>
+                <button
+                  onClick={disconnectWordPress}
+                  className="px-4 py-2 rounded-xl text-sm font-medium border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                >
+                  接続を解除
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-text-dim mb-4">
+                  WordPressサイトを接続して、記事を下書き投稿できます。
+                  WordPress管理画面 → ユーザー → アプリケーションパスワードで発行してください。
+                </p>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block text-sm text-text-primary mb-1">サイトURL</label>
+                    <input
+                      type="url"
+                      value={wpSiteUrl}
+                      onChange={(e) => setWpSiteUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-text-bright text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-primary mb-1">ユーザー名</label>
+                    <input
+                      type="text"
+                      value={wpUsername}
+                      onChange={(e) => setWpUsername(e.target.value)}
+                      placeholder="admin"
+                      className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-text-bright text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-primary mb-1">アプリケーションパスワード</label>
+                    <input
+                      type="password"
+                      value={wpAppPassword}
+                      onChange={(e) => setWpAppPassword(e.target.value)}
+                      placeholder="xxxx xxxx xxxx xxxx"
+                      className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-text-bright text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={testWordPress}
+                  disabled={wpTesting || !wpSiteUrl || !wpUsername || !wpAppPassword}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium bg-accent text-on-accent hover:bg-accent-dark transition-colors disabled:opacity-50"
+                >
+                  {wpTesting ? "接続テスト中..." : "接続テスト"}
+                </button>
+              </div>
+            )}
+
+            {wpMessage && (
+              <div className={`mt-4 text-sm px-3 py-2 rounded-lg ${
+                wpMessage.type === "success"
+                  ? "bg-green-500/10 text-green-400"
+                  : "bg-red-500/10 text-red-400"
+              }`}>
+                {wpMessage.text}
+              </div>
+            )}
           </div>
 
           {/* Danger Zone */}

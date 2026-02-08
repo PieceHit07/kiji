@@ -14,6 +14,8 @@ interface Article {
   seo_score: number;
   created_at: string;
   content?: string;
+  wp_post_id?: number | null;
+  wp_url?: string | null;
 }
 
 export default function ArticlesPage() {
@@ -22,6 +24,8 @@ export default function ArticlesPage() {
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [imageModalArticle, setImageModalArticle] = useState<{title: string; keyword: string; content: string} | null>(null);
+  const [wpConnected, setWpConnected] = useState(false);
+  const [wpPublishingId, setWpPublishingId] = useState<string | null>(null);
 
   const fetchArticles = useCallback(async () => {
     try {
@@ -38,6 +42,10 @@ export default function ArticlesPage() {
 
   useEffect(() => {
     fetchArticles();
+    fetch("/api/user")
+      .then((r) => r.json())
+      .then((d) => setWpConnected(!!d.wordpress))
+      .catch(() => {});
   }, [fetchArticles]);
 
   useEffect(() => {
@@ -103,6 +111,34 @@ export default function ArticlesPage() {
     setImageModalArticle({ title: article.title, keyword: article.keyword, content: content! });
   };
 
+  const publishToWP = async (article: Article) => {
+    setWpPublishingId(article.id);
+    try {
+      const res = await fetch("/api/wordpress/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleId: article.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setArticles((prev) =>
+          prev.map((a) =>
+            a.id === article.id
+              ? { ...a, wp_post_id: data.wpPostId, wp_url: data.wpUrl }
+              : a
+          )
+        );
+        alert(data.isUpdate ? "WordPressの下書きを更新しました" : "WordPressに下書き投稿しました");
+      } else {
+        alert(data.error || "投稿に失敗しました");
+      }
+    } catch {
+      alert("WordPress投稿に失敗しました");
+    } finally {
+      setWpPublishingId(null);
+    }
+  };
+
   const copyNote = async (article: Article) => {
     let content = article.content;
     if (!content) {
@@ -165,6 +201,16 @@ export default function ArticlesPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
+                    {article.wp_post_id && (
+                      <a
+                        href={article.wp_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                      >
+                        WP
+                      </a>
+                    )}
                     <span
                       className={`text-sm font-bold px-2 py-1 rounded ${
                         article.seo_score >= 80
@@ -218,6 +264,19 @@ export default function ArticlesPage() {
                   >
                     リライト
                   </Link>
+                  {wpConnected && (
+                    <button
+                      onClick={() => publishToWP(article)}
+                      disabled={wpPublishingId === article.id}
+                      className="px-3 py-1.5 rounded-lg text-xs bg-surface2 border border-border text-text-primary hover:border-blue-500/30 hover:text-blue-400 transition-all disabled:opacity-50"
+                    >
+                      {wpPublishingId === article.id
+                        ? "投稿中..."
+                        : article.wp_post_id
+                          ? "WP更新"
+                          : "WPに投稿"}
+                    </button>
+                  )}
                   <button
                     onClick={() => deleteArticle(article.id)}
                     className="px-3 py-1.5 rounded-lg text-xs bg-surface2 border border-border text-text-dim hover:border-red-500/20 hover:text-red-400 transition-all ml-auto"
