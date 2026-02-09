@@ -20,6 +20,10 @@ export default function SettingsPage() {
   const [wpTesting, setWpTesting] = useState(false);
   const [wpMessage, setWpMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // GSC連携
+  const [gscConnected, setGscConnected] = useState<{ siteUrl: string } | null>(null);
+  const [gscMessage, setGscMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   useEffect(() => {
     if (session?.user) {
       fetch("/api/user")
@@ -28,6 +32,9 @@ export default function SettingsPage() {
           setUserInfo({ plan: d.plan, tokens: d.tokens });
           if (d.wordpress) {
             setWpConnected(d.wordpress);
+          }
+          if (d.gsc) {
+            setGscConnected(d.gsc);
           }
         })
         .catch(() => {});
@@ -320,6 +327,93 @@ export default function SettingsPage() {
                   : "bg-red-500/10 text-red-400"
               }`}>
                 {wpMessage.text}
+              </div>
+            )}
+          </div>
+
+          {/* Google Search Console連携 */}
+          <div className="bg-surface border border-border rounded-xl p-6 mb-6 relative">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-base font-semibold text-text-bright">Search Console連携</h2>
+              {!isPaid && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--color-accent-tint)] text-accent font-medium">
+                  Pro
+                </span>
+              )}
+            </div>
+
+            {!isPaid ? (
+              <div className="relative">
+                <div className="opacity-40 pointer-events-none select-none">
+                  <p className="text-sm text-text-dim mb-4">Google Search Consoleを接続して検索パフォーマンスを分析できます。</p>
+                  <div className="px-4 py-2.5 rounded-xl text-sm font-medium bg-accent text-on-accent w-fit">
+                    Googleアカウントで接続
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-3xl mb-2">🔒</div>
+                  <p className="text-sm text-text-primary font-medium mb-1">Proプラン以上で利用可能</p>
+                  <p className="text-xs text-text-dim mb-3">検索データからSEO改善を提案します</p>
+                  <a
+                    href="/pricing"
+                    className="px-4 py-2 rounded-xl text-sm font-medium bg-accent text-on-accent hover:bg-accent-dark transition-colors"
+                  >
+                    アップグレード
+                  </a>
+                </div>
+              </div>
+            ) : gscConnected ? (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-sm px-3 py-1 rounded-lg font-medium bg-green-500/10 text-green-400">
+                    接続済み
+                  </span>
+                  <span className="text-sm text-text-primary">{gscConnected.siteUrl}</span>
+                </div>
+                <div className="flex gap-3">
+                  <a
+                    href="/search-console"
+                    className="px-4 py-2 rounded-xl text-sm font-medium border border-border text-text-primary hover:bg-hover-subtle transition-colors"
+                  >
+                    Search Consoleを開く
+                  </a>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await fetch("/api/gsc/connect", { method: "DELETE" });
+                        setGscConnected(null);
+                        setGscMessage({ type: "success", text: "Search Consoleの接続を解除しました" });
+                      } catch {
+                        setGscMessage({ type: "error", text: "解除に失敗しました" });
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-medium border border-red-400/30 text-red-400 hover:bg-red-400/10 transition-colors"
+                  >
+                    接続を解除
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-text-dim mb-4">
+                  Google Search Consoleを接続して、検索パフォーマンスデータに基づいたSEO改善提案を受けられます。
+                </p>
+                <a
+                  href="/api/gsc/connect"
+                  className="inline-block px-4 py-2.5 rounded-xl text-sm font-medium bg-accent text-on-accent hover:bg-accent-dark transition-colors"
+                >
+                  Googleアカウントで接続
+                </a>
+              </div>
+            )}
+
+            {gscMessage && (
+              <div className={`mt-4 text-sm px-3 py-2 rounded-lg ${
+                gscMessage.type === "success"
+                  ? "bg-green-500/10 text-green-400"
+                  : "bg-red-500/10 text-red-400"
+              }`}>
+                {gscMessage.text}
               </div>
             )}
           </div>

@@ -111,8 +111,8 @@ export default function Sidebar() {
       <Link
         href="/rewrite"
         title="リライト"
-        className={`flex items-center rounded-lg text-sm ${
-          collapsed ? "justify-center px-2 py-2.5 mb-3" : "gap-2.5 px-3 py-2.5 mb-6"
+        className={`flex items-center rounded-lg text-sm mb-1 ${
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
         } ${
           pathname === "/rewrite"
             ? "bg-[var(--color-accent-tint)] text-accent"
@@ -121,6 +121,20 @@ export default function Sidebar() {
       >
         <RefreshIcon />
         {!collapsed && <span>リライト</span>}
+      </Link>
+      <Link
+        href="/bulk"
+        title="一括生成"
+        className={`flex items-center rounded-lg text-sm ${
+          collapsed ? "justify-center px-2 py-2.5 mb-3" : "gap-2.5 px-3 py-2.5 mb-6"
+        } ${
+          pathname === "/bulk"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+        }`}
+      >
+        <StackIcon />
+        {!collapsed && <span>一括生成</span>}
       </Link>
 
       {!collapsed && (
@@ -155,6 +169,34 @@ export default function Sidebar() {
       >
         <ChartIcon />
         {!collapsed && <span>順位トラッキング</span>}
+      </Link>
+      <Link
+        href="/keywords"
+        title="キーワード提案"
+        className={`flex items-center rounded-lg text-sm mb-1 ${
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+        } ${
+          pathname === "/keywords"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+        }`}
+      >
+        <LightbulbIcon />
+        {!collapsed && <span>キーワード提案</span>}
+      </Link>
+      <Link
+        href="/search-console"
+        title="Search Console"
+        className={`flex items-center rounded-lg text-sm mb-1 ${
+          collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"
+        } ${
+          pathname === "/search-console"
+            ? "bg-[var(--color-accent-tint)] text-accent"
+            : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+        }`}
+      >
+        <GSCIcon />
+        {!collapsed && <span>Search Console</span>}
       </Link>
 
       <div className="flex-1" />
@@ -427,6 +469,30 @@ function SettingsIcon() {
     <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx={12} cy={12} r={3} />
       <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  );
+}
+
+function StackIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
+function LightbulbIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z" />
+    </svg>
+  );
+}
+
+function GSCIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M12 20V10M18 20V4M6 20v-4" />
     </svg>
   );
 }

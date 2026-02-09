@@ -66,6 +66,40 @@ export function convertToNoteFormat(html: string): string {
   return result;
 }
 
+// note.com用にHTMLを整形（h1除去、不要タグ除去）
+export function convertToNoteHtml(html: string): string {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+
+  // h1を除去（noteではタイトル欄に入力するため）
+  const h1 = div.querySelector("h1");
+  if (h1) h1.remove();
+
+  // note非対応タグをシンプル化
+  div.querySelectorAll("span, div, section, article").forEach((el) => {
+    el.replaceWith(...Array.from(el.childNodes));
+  });
+
+  return div.innerHTML.trim();
+}
+
+// HTMLをリッチテキストとしてクリップボードにコピー（note用）
+export async function copyHtmlToClipboard(html: string, fallbackText: string): Promise<void> {
+  try {
+    const htmlBlob = new Blob([html], { type: "text/html" });
+    const textBlob = new Blob([fallbackText], { type: "text/plain" });
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": htmlBlob,
+        "text/plain": textBlob,
+      }),
+    ]);
+  } catch {
+    // フォールバック: プレーンテキストのみ
+    await navigator.clipboard.writeText(fallbackText);
+  }
+}
+
 // テキストをクリップボードにコピー（ブラウザ用）
 export async function copyToClipboard(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);

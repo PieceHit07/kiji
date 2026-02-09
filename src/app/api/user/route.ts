@@ -13,11 +13,11 @@ export async function GET() {
 
   const balance = await getTokenBalance(session.user.email);
 
-  // WordPress接続情報を取得
+  // WordPress・GSC接続情報を取得
   const supabase = getSupabaseAdmin();
-  const { data: wpData } = await supabase
+  const { data: userData } = await supabase
     .from("users")
-    .select("wp_site_url, wp_username")
+    .select("wp_site_url, wp_username, gsc_site_url, gsc_refresh_token")
     .eq("email", session.user.email)
     .single();
 
@@ -30,8 +30,11 @@ export async function GET() {
       remaining: balance.remaining,
     },
     resetAt: balance.resetAt,
-    wordpress: wpData?.wp_site_url
-      ? { siteUrl: wpData.wp_site_url, username: wpData.wp_username }
+    wordpress: userData?.wp_site_url
+      ? { siteUrl: userData.wp_site_url, username: userData.wp_username }
+      : null,
+    gsc: userData?.gsc_refresh_token
+      ? { siteUrl: userData.gsc_site_url }
       : null,
   });
 }

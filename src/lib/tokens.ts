@@ -8,6 +8,7 @@ export const TOKEN_COSTS = {
   analyze: 3,
   cooccurrence: 2,
   ranking: 1,
+  keywords: 3,
 } as const;
 
 export type TokenAction = keyof typeof TOKEN_COSTS;
@@ -169,4 +170,20 @@ export async function consumeTokens(
   }
 
   return { success: true, remaining: balance.remaining - cost };
+}
+
+// バッチ用トークン事前チェック
+export async function checkBatchTokens(
+  email: string,
+  keywordCount: number
+): Promise<{ canProceed: boolean; required: number; remaining: number; plan: string }> {
+  const balance = await getTokenBalance(email);
+  const costPerArticle = TOKEN_COSTS.analyze + TOKEN_COSTS.generate; // 13
+  const required = costPerArticle * keywordCount;
+  return {
+    canProceed: balance.remaining >= required,
+    required,
+    remaining: balance.remaining,
+    plan: balance.plan,
+  };
 }

@@ -5,7 +5,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import ImageGenerateModal from "@/components/ImageGenerateModal";
-import { convertToNoteFormat } from "@/lib/export";
+import { convertToNoteFormat, convertToNoteHtml, copyHtmlToClipboard } from "@/lib/export";
 
 // --- Types ---
 interface Competitor {
@@ -146,12 +146,32 @@ function DashboardContent() {
   // 認証後にキーワードを復元して自動分析
   useEffect(() => {
     if (session && !autoAnalyzeRef.current) {
+      // URLパラメータからキーワードを取得（KW提案ページからの遷移）
+      const kwParam = searchParams.get("keyword");
+      if (kwParam) {
+        autoAnalyzeRef.current = true;
+        setKeyword(kwParam);
+        setTimeout(() => runAnalyze(kwParam), 100);
+        return;
+      }
+
       const pendingKeyword = localStorage.getItem("kiji-pending-keyword");
       if (pendingKeyword) {
         localStorage.removeItem("kiji-pending-keyword");
+        // 詳細設定を復元
+        const savedSettings = localStorage.getItem("kiji-pending-settings");
+        if (savedSettings) {
+          localStorage.removeItem("kiji-pending-settings");
+          try {
+            const s = JSON.parse(savedSettings);
+            if (s.tone) setSelectedTone(s.tone);
+            if (s.customPrompt) setCustomPrompt(s.customPrompt);
+            if (s.referenceUrl) setReferenceUrl(s.referenceUrl);
+            if (s.showAdvanced) setShowAdvanced(true);
+          } catch {}
+        }
         autoAnalyzeRef.current = true;
         setKeyword(pendingKeyword);
-        // キーワードセット後に分析を実行
         setTimeout(() => {
           runAnalyze(pendingKeyword);
         }, 100);
@@ -195,9 +215,15 @@ function DashboardContent() {
   const handleAnalyze = useCallback(async () => {
     if (!keyword.trim()) return;
 
-    // 未ログインならキーワードを保存してGoogle認証へ
+    // 未ログインならキーワード+詳細設定を保存してGoogle認証へ
     if (!session) {
       localStorage.setItem("kiji-pending-keyword", keyword.trim());
+      localStorage.setItem("kiji-pending-settings", JSON.stringify({
+        tone: selectedTone,
+        customPrompt,
+        referenceUrl,
+        showAdvanced,
+      }));
       signIn("google", { callbackUrl: "/dashboard" });
       return;
     }
@@ -362,6 +388,7 @@ function DashboardContent() {
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-text-dim inline-block" />共起語 2</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-text-dim inline-block" />順位 1</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent2 inline-block" />画像 8</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent2 inline-block" />KW提案 3</span>
               </div>
 
               {/* サジェストキーワード */}
@@ -784,10 +811,11 @@ function DashboardContent() {
                     📋 HTMLコピー
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      const noteHtml = convertToNoteHtml(article.content);
                       const noteText = convertToNoteFormat(article.content);
-                      navigator.clipboard.writeText(noteText);
-                      alert("note用テキストをコピーしました");
+                      await copyHtmlToClipboard(noteHtml, noteText);
+                      alert("note用テキストをコピーしました（見出し付き）");
                     }}
                     className="px-4 py-2.5 rounded-lg text-sm bg-surface2 border border-border text-text-primary hover:border-[var(--color-accent2-tint)] hover:text-accent2 transition-all"
                   >
