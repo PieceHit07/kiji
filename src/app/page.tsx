@@ -2,6 +2,33 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useEffect, useRef, type ReactNode } from "react";
+
+function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => el.classList.add("lp-visible"), delay);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [delay]);
+
+  return (
+    <div ref={ref} className={`lp-fade ${className}`}>
+      {children}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const { data: session } = useSession();
@@ -41,8 +68,22 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-32 pb-24 px-6">
-        <div className="max-w-3xl mx-auto">
+      <section className="relative pt-32 pb-28 px-6 overflow-hidden">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(0,229,160,0.12)] via-[rgba(0,196,255,0.06)] to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-accent/10 blur-[120px]" />
+        <div className="absolute top-32 -left-20 w-[500px] h-[500px] rounded-full bg-accent/8 blur-[100px]" />
+        <div className="absolute top-20 -right-20 w-[400px] h-[400px] rounded-full bg-[var(--color-accent2)]/10 blur-[100px]" />
+        <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] rounded-full bg-[#a855f7]/6 blur-[80px]" />
+        {/* Grid pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: "60px 60px",
+          }}
+        />
+        <div className="relative max-w-3xl mx-auto">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.3] mb-6 tracking-tight">
             SEO記事、<br className="sm:hidden" />
             まだ手作業で<br className="hidden sm:block" />
@@ -56,7 +97,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href={session ? "/dashboard" : "/login"}
-              className="px-7 py-3.5 rounded-xl bg-accent text-on-accent font-semibold text-sm hover:bg-accent-dark transition-colors"
+              className="px-7 py-3.5 rounded-xl bg-accent text-on-accent font-semibold text-sm shadow-[0_0_30px_rgba(0,229,160,0.3)] hover:shadow-[0_0_50px_rgba(0,229,160,0.45)] hover:-translate-y-0.5 transition-all"
             >
               無料で試す
             </Link>
@@ -76,68 +117,76 @@ export default function LandingPage() {
       {/* What it does */}
       <section className="py-16 px-6 border-y border-border">
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
-          <div>
+          <FadeIn delay={0}>
             <div className="text-sm font-mono text-accent mb-2">01</div>
             <h3 className="font-semibold mb-2">競合を分析</h3>
             <p className="text-sm text-text-dim leading-relaxed">
               検索上位10記事の見出し構成・文字数・共起語を自動で解析。勝つために必要な情報を整理します。
             </p>
-          </div>
-          <div>
+          </FadeIn>
+          <FadeIn delay={120}>
             <div className="text-sm font-mono text-accent mb-2">02</div>
             <h3 className="font-semibold mb-2">記事を生成</h3>
             <p className="text-sm text-text-dim leading-relaxed">
               分析データをもとに、SEOに最適化された5,000字以上の記事をGPT-4oが生成。構成案の編集も可能。
             </p>
-          </div>
-          <div>
+          </FadeIn>
+          <FadeIn delay={240}>
             <div className="text-sm font-mono text-accent mb-2">03</div>
             <h3 className="font-semibold mb-2">そのまま公開</h3>
             <p className="text-sm text-text-dim leading-relaxed">
               WordPress連携でワンクリック投稿。note用コピーやHTML出力にも対応しています。
             </p>
-          </div>
+          </FadeIn>
         </div>
       </section>
 
       {/* How */}
       <section id="how" className="py-20 px-6">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-12">使い方</h2>
+          <FadeIn>
+            <h2 className="text-2xl font-bold mb-12">使い方</h2>
+          </FadeIn>
           <div className="space-y-10">
-            <div className="flex gap-5">
-              <div className="w-8 h-8 rounded-full bg-surface2 border border-border text-sm font-mono text-text-dim flex items-center justify-center flex-shrink-0 mt-0.5">
-                1
+            <FadeIn delay={100}>
+              <div className="flex gap-5">
+                <div className="w-8 h-8 rounded-full bg-surface2 border border-border text-sm font-mono text-text-dim flex items-center justify-center flex-shrink-0 mt-0.5">
+                  1
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">キーワードを入力</h3>
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    狙いたい検索キーワードを入力します。「SEOツール おすすめ」のような複合ワードもOK。
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-1">キーワードを入力</h3>
-                <p className="text-sm text-text-dim leading-relaxed">
-                  狙いたい検索キーワードを入力します。「SEOツール おすすめ」のような複合ワードもOK。
-                </p>
+            </FadeIn>
+            <FadeIn delay={200}>
+              <div className="flex gap-5">
+                <div className="w-8 h-8 rounded-full bg-surface2 border border-border text-sm font-mono text-text-dim flex items-center justify-center flex-shrink-0 mt-0.5">
+                  2
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">構成案を確認・編集</h3>
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    競合分析の結果をもとにAIが見出し構成を提案。必要に応じて見出しの追加・削除・並び替えができます。
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-5">
-              <div className="w-8 h-8 rounded-full bg-surface2 border border-border text-sm font-mono text-text-dim flex items-center justify-center flex-shrink-0 mt-0.5">
-                2
+            </FadeIn>
+            <FadeIn delay={300}>
+              <div className="flex gap-5">
+                <div className="w-8 h-8 rounded-full bg-surface2 border border-border text-sm font-mono text-text-dim flex items-center justify-center flex-shrink-0 mt-0.5">
+                  3
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">生成して公開</h3>
+                  <p className="text-sm text-text-dim leading-relaxed">
+                    記事が生成されたらSEOスコアを確認。WordPressへの投稿、HTMLコピー、note用コピーがワンクリックで完了します。
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-1">構成案を確認・編集</h3>
-                <p className="text-sm text-text-dim leading-relaxed">
-                  競合分析の結果をもとにAIが見出し構成を提案。必要に応じて見出しの追加・削除・並び替えができます。
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-5">
-              <div className="w-8 h-8 rounded-full bg-surface2 border border-border text-sm font-mono text-text-dim flex items-center justify-center flex-shrink-0 mt-0.5">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">生成して公開</h3>
-                <p className="text-sm text-text-dim leading-relaxed">
-                  記事が生成されたらSEOスコアを確認。WordPressへの投稿、HTMLコピー、note用コピーがワンクリックで完了します。
-                </p>
-              </div>
-            </div>
+            </FadeIn>
           </div>
         </div>
       </section>
@@ -145,10 +194,13 @@ export default function LandingPage() {
       {/* 他のツールとの違い */}
       <section className="py-20 px-6 border-y border-border">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4">他ツールとの違い</h2>
-          <p className="text-text-dim text-sm mb-10">
-            ChatGPTに「記事書いて」では上位表示できません。Kijiは検索データを使います。
-          </p>
+          <FadeIn>
+            <h2 className="text-2xl font-bold mb-4">他ツールとの違い</h2>
+            <p className="text-text-dim text-sm mb-10">
+              ChatGPTに「記事書いて」では上位表示できません。Kijiは検索データを使います。
+            </p>
+          </FadeIn>
+          <FadeIn delay={150}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -192,19 +244,23 @@ export default function LandingPage() {
               </tbody>
             </table>
           </div>
+          </FadeIn>
         </div>
       </section>
 
       {/* Pricing */}
       <section id="pricing" className="py-20 px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-2">料金</h2>
-          <p className="text-text-dim text-sm mb-10">
-            無料で始めて、必要になったらアップグレード。
-          </p>
+          <FadeIn>
+            <h2 className="text-2xl font-bold mb-2">料金</h2>
+            <p className="text-text-dim text-sm mb-10">
+              無料で始めて、必要になったらアップグレード。
+            </p>
+          </FadeIn>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Free */}
-            <div className="rounded-xl border border-border p-6 flex flex-col">
+            <FadeIn delay={0} className="flex flex-col">
+            <div className="rounded-xl border border-border p-6 flex flex-col h-full">
               <div className="mb-5">
                 <h3 className="font-semibold mb-1">Free</h3>
                 <p className="text-xs text-text-dim">まずは試したい方に</p>
@@ -224,9 +280,11 @@ export default function LandingPage() {
                 無料で始める
               </Link>
             </div>
+            </FadeIn>
 
             {/* Pro */}
-            <div className="rounded-xl border-2 border-accent/30 p-6 flex flex-col relative">
+            <FadeIn delay={120} className="flex flex-col">
+            <div className="rounded-xl border-2 border-accent/30 p-6 flex flex-col relative h-full">
               <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded text-xs font-medium bg-accent text-on-accent">
                 おすすめ
               </div>
@@ -253,9 +311,11 @@ export default function LandingPage() {
                 Proを始める
               </Link>
             </div>
+            </FadeIn>
 
             {/* Business */}
-            <div className="rounded-xl border border-border p-6 flex flex-col">
+            <FadeIn delay={240} className="flex flex-col">
+            <div className="rounded-xl border border-border p-6 flex flex-col h-full">
               <div className="mb-5">
                 <h3 className="font-semibold mb-1">Business</h3>
                 <p className="text-xs text-text-dim">チームで本格運用</p>
@@ -279,26 +339,29 @@ export default function LandingPage() {
                 Businessを始める
               </Link>
             </div>
+            </FadeIn>
           </div>
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-20 px-6 border-t border-border">
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-3">
-            まずは1記事、無料で試してみてください。
-          </h2>
-          <p className="text-text-dim text-sm mb-8">
-            Googleアカウントで登録するだけ。すぐに記事を生成できます。
-          </p>
-          <Link
-            href={session ? "/dashboard" : "/login"}
-            className="inline-block px-8 py-3.5 rounded-xl bg-accent text-on-accent font-semibold text-sm hover:bg-accent-dark transition-colors"
-          >
-            無料で始める
-          </Link>
-        </div>
+        <FadeIn>
+          <div className="max-w-xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-3">
+              まずは1記事、無料で試してみてください。
+            </h2>
+            <p className="text-text-dim text-sm mb-8">
+              Googleアカウントで登録するだけ。すぐに記事を生成できます。
+            </p>
+            <Link
+              href={session ? "/dashboard" : "/login"}
+              className="inline-block px-8 py-3.5 rounded-xl bg-accent text-on-accent font-semibold text-sm hover:bg-accent-dark transition-colors"
+            >
+              無料で始める
+            </Link>
+          </div>
+        </FadeIn>
       </section>
 
       {/* Footer */}

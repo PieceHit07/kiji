@@ -111,3 +111,14 @@ body {
 .prose-preview p { color: var(--color-text-dim); font-size: 0.85rem; line-height: 1.7; margin: 0.4em 0; }
 .prose-preview ul, .prose-preview ol { color: var(--color-text-dim); font-size: 0.85rem; padding-left: 1.2em; }
 .prose-preview strong { color: var(--color-text-primary); }
+
+/* LP scroll fade-in animation */
+.lp-fade {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lp-fade.lp-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
