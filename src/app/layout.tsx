@@ -23,7 +23,9 @@ export const metadata: Metadata = {
       "キーワードを入れるだけ。競合分析から記事生成、WordPress投稿まで一気通貫。",
   },
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
   },
 };
 
