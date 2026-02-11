@@ -9,6 +9,7 @@ import { useTheme } from "@/components/ThemeProvider";
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userPlan, setUserPlan] = useState<string>("free");
   const [tokensRemaining, setTokensRemaining] = useState<number | null>(null);
   const { data: session } = useSession();
@@ -48,6 +49,7 @@ export default function Sidebar() {
   };
 
   return (
+    <>
     <aside
       className={`bg-sidebar border-r border-border flex flex-col transition-all duration-300 max-md:hidden relative ${
         collapsed ? "w-16 min-w-[64px] p-3" : "w-56 min-w-[224px] p-5"
@@ -356,6 +358,166 @@ export default function Sidebar() {
         </div>
       )}
     </aside>
+
+    {/* ===== Mobile Bottom Nav ===== */}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-sidebar/95 backdrop-blur-xl border-t border-border md:hidden safe-bottom">
+      <div className="flex items-center justify-around h-14">
+        <Link
+          href="/dashboard"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 ${
+            pathname === "/dashboard" ? "text-accent" : "text-text-dim"
+          }`}
+        >
+          <PlusIcon />
+          <span className="text-[0.6rem]">新規作成</span>
+        </Link>
+        <Link
+          href="/articles"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 ${
+            pathname === "/articles" ? "text-accent" : "text-text-dim"
+          }`}
+        >
+          <ListIcon />
+          <span className="text-[0.6rem]">記事一覧</span>
+        </Link>
+        <Link
+          href="/rewrite"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 ${
+            pathname === "/rewrite" ? "text-accent" : "text-text-dim"
+          }`}
+        >
+          <RefreshIcon />
+          <span className="text-[0.6rem]">リライト</span>
+        </Link>
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 text-text-dim"
+        >
+          <MenuIcon />
+          <span className="text-[0.6rem]">メニュー</span>
+        </button>
+      </div>
+    </nav>
+
+    {/* ===== Mobile Slide Menu ===== */}
+    {mobileMenuOpen && (
+      <div className="fixed inset-0 z-[60] md:hidden">
+        <div className="absolute inset-0 bg-[var(--color-backdrop)]" onClick={() => setMobileMenuOpen(false)} />
+        <div className="absolute right-0 top-0 bottom-0 w-72 bg-sidebar border-l border-border p-5 overflow-y-auto animate-slideIn">
+          <div className="flex items-center justify-between mb-6">
+            <span className="font-mono font-bold text-text-bright text-lg">
+              Kiji<span className="text-accent">.</span>
+            </span>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-dim hover:bg-hover-subtle"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          <div className="text-[0.7rem] text-text-dim uppercase tracking-[2px] mb-3 px-2">メイン</div>
+          {[
+            { href: "/dashboard", label: "新規記事作成", icon: <PlusIcon /> },
+            { href: "/articles", label: "記事一覧", icon: <ListIcon /> },
+            { href: "/rewrite", label: "リライト", icon: <RefreshIcon /> },
+            { href: "/bulk", label: "一括生成", icon: <StackIcon /> },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-1 ${
+                pathname === item.href
+                  ? "bg-[var(--color-accent-tint)] text-accent"
+                  : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+              }`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+
+          <div className="text-[0.7rem] text-text-dim uppercase tracking-[2px] mb-3 mt-6 px-2">ツール</div>
+          {[
+            { href: "/cooccurrence", label: "共起語チェッカー", icon: <SearchIcon /> },
+            { href: "/ranking", label: "順位トラッキング", icon: <ChartIcon /> },
+            { href: "/keywords", label: "キーワード提案", icon: <LightbulbIcon /> },
+            { href: "/search-console", label: "Search Console", icon: <GSCIcon /> },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-1 ${
+                pathname === item.href
+                  ? "bg-[var(--color-accent-tint)] text-accent"
+                  : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+              }`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+
+          <div className="border-t border-border mt-6 pt-4 space-y-1">
+            <button
+              onClick={() => { toggleTheme(); setMobileMenuOpen(false); }}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-text-dim hover:bg-hover-subtle hover:text-text-primary w-full"
+            >
+              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              <span>{theme === "dark" ? "ライトモード" : "ダークモード"}</span>
+            </button>
+            <Link
+              href="/pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm ${
+                pathname === "/pricing" ? "text-accent" : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+              }`}
+            >
+              <CreditCardIcon />
+              <span>料金プラン</span>
+            </Link>
+            <Link
+              href="/settings"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm ${
+                pathname === "/settings" ? "text-accent" : "text-text-dim hover:bg-hover-subtle hover:text-text-primary"
+              }`}
+            >
+              <SettingsIcon />
+              <span>アカウント設定</span>
+            </Link>
+          </div>
+
+          {session?.user && (
+            <div className="border-t border-border mt-4 pt-4">
+              <div className="flex items-center gap-2.5 px-2 mb-3">
+                {session?.user?.image ? (
+                  <img src={session.user.image} alt="" className="w-8 h-8 rounded-lg" />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent2 flex items-center justify-center text-xs font-bold text-on-accent">
+                    {session?.user?.name?.[0] || "U"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-sm text-text-primary truncate">{session?.user?.name || "User"}</div>
+                  <div className="text-[0.65rem] text-text-dim truncate">{session?.user?.email}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-text-dim hover:bg-hover-subtle hover:text-red-400 transition-colors"
+              >
+                <LogoutIcon />
+                ログアウト
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -493,6 +655,22 @@ function GSCIcon() {
   return (
     <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M12 20V10M18 20V4M6 20v-4" />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M18 6L6 18M6 6l12 12" />
     </svg>
   );
 }

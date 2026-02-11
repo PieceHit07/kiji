@@ -116,8 +116,8 @@ export default function PricingPage() {
   return (
     <div className="flex min-h-screen bg-bg">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-12">
+      <main className="flex-1 overflow-y-auto pb-14 md:pb-0">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-8 md:py-12">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-text-bright mb-3">

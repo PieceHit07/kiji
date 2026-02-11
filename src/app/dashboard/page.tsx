@@ -316,9 +316,9 @@ function DashboardContent() {
       <Sidebar />
 
       {/* Main */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden pb-14 md:pb-0">
         {/* Topbar */}
-        <div className="h-14 min-h-[56px] border-b border-border flex items-center justify-between px-7">
+        <div className="h-14 min-h-[56px] border-b border-border flex items-center justify-between px-4 md:px-7">
           <div className="text-base font-semibold text-text-bright">
             {step === "input" && "新規記事作成"}
             {step === "analyzing" && "競合分析中..."}
@@ -336,7 +336,7 @@ function DashboardContent() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-7">
+        <div className="flex-1 overflow-y-auto p-4 md:p-7">
           {/* Error */}
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400 text-sm">
@@ -346,13 +346,13 @@ function DashboardContent() {
 
           {/* === STEP: INPUT === */}
           {(step === "input" || step === "analyzing") && (
-            <div className="bg-surface border border-border rounded-2xl p-8 relative overflow-hidden">
+            <div className="bg-surface border border-border rounded-2xl p-4 md:p-8 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent via-accent2 to-accent bg-[length:200%_100%] animate-[gradientSlide_3s_linear_infinite]" />
 
               <label className="text-sm text-text-dim block mb-3">
                 ターゲットキーワード
               </label>
-              <div className="flex gap-3 mb-5">
+              <div className="flex flex-col sm:flex-row gap-3 mb-5">
                 <input
                   type="text"
                   value={keyword}
@@ -380,7 +380,7 @@ function DashboardContent() {
               </div>
 
               {/* トークンコスト */}
-              <div className="flex items-center gap-4 mb-5 px-1 text-[0.7rem] text-text-dim">
+              <div className="flex items-center gap-x-4 gap-y-1 flex-wrap mb-5 px-1 text-[0.7rem] text-text-dim">
                 <span>消費トークン:</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />分析 3</span>
                 <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent2 inline-block" />生成 10</span>
@@ -537,21 +537,21 @@ function DashboardContent() {
               </div>
 
               {/* Info bar */}
-              <div className="flex gap-3 mb-6">
-                <div className="flex-1 bg-surface border border-border rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold font-mono text-accent">
+              <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
+                <div className="bg-surface border border-border rounded-xl p-3 md:p-4 text-center">
+                  <div className="text-lg md:text-2xl font-bold font-mono text-accent">
                     {analysis.seoTargets.avgWordCount.toLocaleString()}字
                   </div>
                   <div className="text-xs text-text-dim mt-1">競合平均文字数</div>
                 </div>
-                <div className="flex-1 bg-surface border border-border rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold font-mono text-accent2">
+                <div className="bg-surface border border-border rounded-xl p-3 md:p-4 text-center">
+                  <div className="text-lg md:text-2xl font-bold font-mono text-accent2">
                     {analysis.seoTargets.recommendedWordCount.toLocaleString()}字
                   </div>
                   <div className="text-xs text-text-dim mt-1">推奨文字数</div>
                 </div>
-                <div className="flex-1 bg-surface border border-border rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold font-mono text-text-bright">
+                <div className="bg-surface border border-border rounded-xl p-3 md:p-4 text-center">
+                  <div className="text-lg md:text-2xl font-bold font-mono text-text-bright">
                     {outline.filter((o) => o.tag === "h2").length}
                   </div>
                   <div className="text-xs text-text-dim mt-1">H2セクション数</div>
@@ -559,7 +559,7 @@ function DashboardContent() {
               </div>
 
               {/* Outline Editor */}
-              <div className="bg-surface border border-border rounded-xl p-6 mb-6">
+              <div className="bg-surface border border-border rounded-xl p-4 md:p-6 mb-6">
                 <div className="flex justify-between items-center mb-5">
                   <h3 className="text-base font-semibold text-text-bright">
                     📝 構成案
@@ -689,8 +689,8 @@ function DashboardContent() {
               </div>
 
               {/* Article Preview */}
-              <div className="bg-surface border border-border rounded-xl p-8 mb-6">
-                <div className="flex gap-2 mb-4 text-xs text-text-dim">
+              <div className="bg-surface border border-border rounded-xl p-4 md:p-8 mb-6">
+                <div className="flex gap-2 mb-4 text-xs text-text-dim flex-wrap">
                   <span>📝 {article.wordCount.toLocaleString()}文字</span>
                   <span>・</span>
                   <span>⏱ 読了 約{Math.ceil(article.wordCount / 600)}分</span>
@@ -716,12 +716,12 @@ function DashboardContent() {
               </div>
 
               {/* Publish Bar */}
-              <div className="flex items-center justify-between bg-surface border border-border rounded-xl p-5">
-                <div>
+              <div className="bg-surface border border-border rounded-xl p-4 md:p-5">
+                <div className="mb-3">
                   <div className="font-semibold text-text-bright mb-1">記事の準備ができました ✅</div>
                   <div className="text-xs text-text-dim">保存、HTMLコピー{wpConnected ? "、WordPress投稿" : ""}ができます</div>
                 </div>
-                <div className="flex gap-3 items-center">
+                <div className="flex gap-2 md:gap-3 items-center flex-wrap">
                   <button
                     onClick={async () => {
                       try {

@@ -112,6 +112,20 @@ body {
 .prose-preview ul, .prose-preview ol { color: var(--color-text-dim); font-size: 0.85rem; padding-left: 1.2em; }
 .prose-preview strong { color: var(--color-text-primary); }
 
+/* Mobile safe area for bottom nav (iOS notch) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile slide-in menu animation */
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slideIn {
+  animation: slideIn 0.25s ease-out;
+}
+
 /* LP scroll fade-in animation */
 .lp-fade {
   opacity: 0;
