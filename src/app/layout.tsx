@@ -4,23 +4,23 @@ import AuthProvider from "@/components/AuthProvider";
 import ThemeProvider from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Kiji — AIがSEO記事を自動生成",
+  title: "Kiji — 上位記事を分析してSEO記事をAI自動生成",
   description:
-    "キーワードを入れるだけ。競合分析から記事生成、WordPress投稿まで一気通貫。",
+    "上位10記事の構成・共起語を自動分析し、検索で勝てる記事をAIが生成。キーワードを入れて5分、あとは公開するだけ。",
   metadataBase: new URL(process.env.NEXTAUTH_URL || "https://kiji-ai.app"),
   openGraph: {
-    title: "Kiji — AIがSEO記事を自動生成",
+    title: "Kiji — 上位記事を分析してSEO記事をAI自動生成",
     description:
-      "キーワードを入れるだけ。競合分析から記事生成、WordPress投稿まで一気通貫。",
+      "上位10記事の構成・共起語を自動分析し、検索で勝てる記事をAIが生成。キーワードを入れて5分、あとは公開するだけ。",
     siteName: "Kiji",
     locale: "ja_JP",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kiji — AIがSEO記事を自動生成",
+    title: "Kiji — 上位記事を分析してSEO記事をAI自動生成",
     description:
-      "キーワードを入れるだけ。競合分析から記事生成、WordPress投稿まで一気通貫。",
+      "上位10記事の構成・共起語を自動分析し、検索で勝てる記事をAIが生成。キーワードを入れて5分、あとは公開するだけ。",
   },
   icons: {
     icon: [
