@@ -207,7 +207,7 @@ export default function ArticlesPage() {
     return true;
   });
 
-  const isPaid = userPlan === "pro" || userPlan === "business";
+  const isPaid = userPlan === "business";
   const rewriteCount = articles.filter((a) => a.suggestion !== null).length;
   const performingCount = articles.filter((a) => a.gsc !== null && a.gsc.position <= 10).length;
 
@@ -293,7 +293,7 @@ export default function ArticlesPage() {
             <div className="bg-surface border border-border rounded-xl p-12 text-center">
               <div className="text-4xl mb-4">🔒</div>
               <h3 className="text-lg font-semibold text-text-bright mb-2">
-                Pro / Business プラン限定
+                Business プラン限定
               </h3>
               <p className="text-text-dim text-sm mb-6 max-w-md mx-auto">
                 記事パフォーマンス追跡・リライト提案は有料プランでご利用いただけます。

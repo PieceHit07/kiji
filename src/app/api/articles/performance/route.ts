@@ -101,7 +101,7 @@ export async function GET() {
     }
 
     const plan = user.plan || "free";
-    const isPaid = plan === "pro" || plan === "business";
+    const isPaid = plan === "business";
 
     // 記事一覧取得
     const { data: articles } = await supabase

@@ -49,7 +49,7 @@ function SearchConsoleContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const isPaid = userPlan === "pro" || userPlan === "business";
+  const isPaid = userPlan === "business";
 
   // ユーザー情報取得
   useEffect(() => {
@@ -172,7 +172,7 @@ function SearchConsoleContent() {
                 </div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className="text-3xl mb-2">🔒</div>
-                  <p className="text-sm text-text-primary font-medium mb-1">Proプラン以上で利用可能</p>
+                  <p className="text-sm text-text-primary font-medium mb-1">Businessプランで利用可能</p>
                   <p className="text-xs text-text-dim mb-3">Google Search Consoleのデータからキーワード改善を提案します</p>
                   <a
                     href="/pricing"

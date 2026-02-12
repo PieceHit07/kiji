@@ -14,9 +14,9 @@ export async function GET() {
 
     // プランチェック
     const balance = await getTokenBalance(session.user.email);
-    if (balance.plan === "free") {
+    if (balance.plan !== "business") {
       return NextResponse.json(
-        { error: "Search Console連携はPro/Businessプラン限定です" },
+        { error: "Search Console連携はBusinessプラン限定です" },
         { status: 403 }
       );
     }

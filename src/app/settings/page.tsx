@@ -98,6 +98,7 @@ export default function SettingsPage() {
 
   const planLabel = userInfo?.plan === "business" ? "Business" : userInfo?.plan === "pro" ? "Pro" : "Free";
   const isPaid = userInfo?.plan === "pro" || userInfo?.plan === "business";
+  const isBusiness = userInfo?.plan === "business";
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -335,14 +336,14 @@ export default function SettingsPage() {
           <div className="bg-surface border border-border rounded-xl p-6 mb-6 relative">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-base font-semibold text-text-bright">Search Console連携</h2>
-              {!isPaid && (
+              {!isBusiness && (
                 <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--color-accent-tint)] text-accent font-medium">
-                  Pro
+                  Business
                 </span>
               )}
             </div>
 
-            {!isPaid ? (
+            {!isBusiness ? (
               <div className="relative">
                 <div className="opacity-40 pointer-events-none select-none">
                   <p className="text-sm text-text-dim mb-4">Google Search Consoleを接続して検索パフォーマンスを分析できます。</p>
@@ -352,7 +353,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className="text-3xl mb-2">🔒</div>
-                  <p className="text-sm text-text-primary font-medium mb-1">Proプラン以上で利用可能</p>
+                  <p className="text-sm text-text-primary font-medium mb-1">Businessプランで利用可能</p>
                   <p className="text-xs text-text-dim mb-3">検索データからSEO改善を提案します</p>
                   <a
                     href="/pricing"
